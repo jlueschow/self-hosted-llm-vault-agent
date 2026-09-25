@@ -1,0 +1,39 @@
+# Node modules
+node_modules/
+yarn.lock
+
+# Build output
+dist/
+main.js
+
+# Generiert von scripts/generate-pdf-worker.mjs (läuft vor jedem Build)
+src/core/pdf-worker-source.ts
+
+# Development
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# Obsidian
+.obsidian/
+
+# Environment variables (never commit API keys!)
+.env
+.env.local
+.env.*.local
+
+# IDE
+*.iml
+out/
+
+# Claude Code (lokale Dev-Server-Konfiguration + private Dev-Notizen)
+.claude/
+CLAUDE.md
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride

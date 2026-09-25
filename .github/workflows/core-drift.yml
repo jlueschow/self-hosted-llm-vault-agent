@@ -1,0 +1,20 @@
+name: Core drift check
+
+# src/core is a copy of the shared core in the Euridian repo. Fail if it drifts.
+on:
+  push:
+  pull_request:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: jlueschow/obsidian-euridian-plugin
+          path: euridian-source
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+      - run: node scripts/sync-core.mjs euridian-source --check

@@ -1,0 +1,592 @@
+/* Euridian — Chat-UI. Nutzt durchgehend Obsidian-CSS-Variablen, damit
+   Light/Dark-Theme automatisch passen. */
+
+.euridian-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 0;
+	position: relative; /* Anker für das Drop-Overlay */
+}
+
+/* --- Header --- */
+.euridian-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.euridian-header-brand {
+	font-weight: 600;
+	flex: 0 0 auto;
+}
+
+/* Modell-Schnellwechsel im Header. */
+.euridian-model-select {
+	flex: 1 1 auto;
+	min-width: 0;
+	max-width: 100%;
+	font-size: var(--font-ui-smaller);
+}
+
+/* --- Tab-Leiste --- */
+.euridian-tabbar {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	overflow-x: auto;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.euridian-tab {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 8px;
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	background: var(--background-secondary);
+	cursor: pointer;
+	white-space: nowrap;
+	max-width: 160px;
+}
+.euridian-tab.is-active {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+	font-weight: 500;
+}
+.euridian-tab-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.euridian-tab-close {
+	display: inline-flex;
+	align-items: center;
+	opacity: 0.6;
+}
+.euridian-tab-close:hover {
+	opacity: 1;
+	color: var(--text-error);
+}
+.euridian-tab-add {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 3px;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	cursor: pointer;
+	flex: 0 0 auto;
+}
+.euridian-tab-add:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+/* --- Tab-Inhalt --- */
+.euridian-body {
+	flex: 1 1 auto;
+	position: relative;
+	overflow: hidden;
+	display: flex;
+}
+.euridian-messages.is-hidden {
+	display: none;
+}
+
+/* --- Nachrichten-Bereich --- */
+.euridian-messages {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.euridian-msg {
+	display: flex;
+	flex-direction: column;
+	max-width: 100%;
+}
+
+.euridian-msg-content {
+	border-radius: var(--radius-m);
+	padding: 8px 12px;
+	font-size: var(--font-ui-small);
+	word-break: break-word;
+	overflow-wrap: anywhere;
+	/* Textauswahl im Chat erlauben (Obsidian-Sidebar verbietet sie sonst). */
+	user-select: text;
+	-webkit-user-select: text;
+	cursor: auto;
+}
+
+/* Auch im Nachrichten-Container Auswahl erlauben (überschreibt App-Chrome). */
+.euridian-messages {
+	user-select: text;
+	-webkit-user-select: text;
+}
+
+.euridian-msg-user {
+	align-items: flex-end;
+}
+
+.euridian-msg-user .euridian-msg-content {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	max-width: 85%;
+}
+
+/* Markierung in eigenen (Akzent-)Bubbles: invertiert, damit sie sichtbar ist.
+   Standard-Selektion wäre wieder Akzent auf Akzent → unsichtbar. */
+.euridian-msg-user .euridian-msg-content::selection {
+	background: var(--text-on-accent);
+	color: var(--interactive-accent);
+}
+.euridian-msg-user .euridian-msg-content ::selection {
+	background: var(--text-on-accent);
+	color: var(--interactive-accent);
+}
+
+.euridian-msg-assistant .euridian-msg-content {
+	background: var(--background-secondary);
+	color: var(--text-normal);
+}
+
+/* Markdown-Output etwas zähmen. */
+.euridian-msg-content p:first-child {
+	margin-top: 0;
+}
+.euridian-msg-content p:last-child {
+	margin-bottom: 0;
+}
+.euridian-msg-content pre {
+	overflow-x: auto;
+}
+
+/* Aktions-Buttons unter Assistant-Antworten. */
+.euridian-msg-actions {
+	display: flex;
+	gap: 4px;
+	margin-top: 4px;
+	opacity: 0;
+	transition: opacity 0.12s ease-in-out;
+}
+.euridian-msg-assistant:hover .euridian-msg-actions {
+	opacity: 1;
+}
+
+.euridian-thinking {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	color: var(--text-muted);
+	font-style: italic;
+	font-size: var(--font-ui-small);
+}
+.euridian-thinking-dots {
+	display: inline-flex;
+	gap: 3px;
+}
+.euridian-thinking-dots span {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+	animation: euridian-thinking-bounce 1.2s infinite ease-in-out both;
+}
+.euridian-thinking-dots span:nth-child(1) {
+	animation-delay: -0.24s;
+}
+.euridian-thinking-dots span:nth-child(2) {
+	animation-delay: -0.12s;
+}
+.euridian-thinking-timer {
+	font-variant-numeric: tabular-nums;
+	font-style: normal;
+}
+@keyframes euridian-thinking-bounce {
+	0%,
+	80%,
+	100% {
+		opacity: 0.3;
+		transform: translateY(0);
+	}
+	40% {
+		opacity: 1;
+		transform: translateY(-4px);
+	}
+}
+
+/* Werkzeug-Aktivität (Agent). */
+.euridian-tools {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	margin-bottom: 6px;
+}
+
+/* Klickbarer Header über der Werkzeug-Liste — zeigt Anzahl, klappt auf/zu. */
+.euridian-tools-header {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 4px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	cursor: pointer;
+	user-select: none;
+}
+.euridian-tools-header:hover {
+	color: var(--text-normal);
+}
+.euridian-tools-chevron {
+	display: inline-flex;
+	opacity: 0.7;
+	transition: transform 0.12s ease;
+}
+.euridian-tools-chevron svg {
+	width: 12px;
+	height: 12px;
+}
+.euridian-tools-header.is-expanded .euridian-tools-chevron {
+	transform: rotate(90deg);
+}
+
+.euridian-tools-list {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+/* Eingeklappt (Default): nur der jeweils neueste Chip bleibt sichtbar. */
+.euridian-tools-list.is-collapsed > .euridian-tool-chip:not(:last-child) {
+	display: none;
+}
+
+.euridian-tool-chip {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 8px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	border-left: 2px solid var(--text-faint);
+}
+.euridian-tool-chip.is-done {
+	border-left-color: var(--interactive-accent);
+}
+.euridian-tool-chip.is-rejected {
+	border-left-color: var(--text-error);
+	text-decoration: line-through;
+	opacity: 0.7;
+}
+.euridian-tool-icon {
+	display: inline-flex;
+	opacity: 0.7;
+}
+.euridian-tool-icon svg {
+	width: 13px;
+	height: 13px;
+}
+.euridian-tool-label {
+	font-family: var(--font-monospace);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.euridian-aborted-note,
+.euridian-error {
+	margin-top: 6px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+.euridian-error {
+	color: var(--text-error);
+}
+
+/* --- Leerer Zustand --- */
+.euridian-empty {
+	margin: auto;
+	text-align: center;
+	color: var(--text-muted);
+}
+.euridian-empty-title {
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+.euridian-empty-sub {
+	font-size: var(--font-ui-smaller);
+}
+
+/* --- Eingabebereich --- */
+.euridian-input-wrap {
+	border-top: 1px solid var(--background-modifier-border);
+	padding: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	position: relative; /* Anker für das Slash-Popup */
+}
+
+/* --- Suggest-Popup („/" Slash-Commands und „@" Mentions) --- */
+.euridian-suggest-popup {
+	position: absolute;
+	left: 8px;
+	right: 8px;
+	bottom: 100%;
+	margin-bottom: 4px;
+	max-height: 220px;
+	overflow-y: auto;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	box-shadow: var(--shadow-s);
+	z-index: 30;
+	padding: 4px;
+}
+.euridian-suggest-popup.is-hidden {
+	display: none;
+}
+.euridian-suggest-item {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	padding: 5px 8px;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+.euridian-suggest-item.is-active {
+	background: var(--background-modifier-hover);
+}
+.euridian-suggest-label {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+}
+.euridian-suggest-sub {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.euridian-input {
+	width: 100%;
+	resize: vertical; /* User-Wunsch aus Claudian #692: Höhe anpassbar */
+	min-height: 48px;
+	max-height: 240px;
+	font-family: inherit;
+	font-size: var(--font-ui-small);
+}
+
+.euridian-input-bottom {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.euridian-status {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.euridian-send-btn {
+	flex: 0 0 auto;
+}
+
+/* Kleiner Icon-Button (Header + Aktionen). */
+.euridian-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	background: transparent;
+	border: none;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	cursor: pointer;
+	box-shadow: none;
+}
+.euridian-icon-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+/* Anhänge-Chips über dem Textarea (pending attachments). */
+.euridian-attachments {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	padding: 4px 0 2px;
+}
+.euridian-attachments.is-hidden {
+	display: none;
+}
+
+.euridian-attachment-chip {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 6px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+}
+.euridian-attachment-remove {
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+	opacity: 0.6;
+}
+.euridian-attachment-remove:hover {
+	opacity: 1;
+	color: var(--text-error);
+}
+
+/* Datei-Chips unter gesendeten Nachrichten (nicht-interaktiv). */
+.euridian-msg-files {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 4px;
+	justify-content: flex-end;
+}
+.euridian-file-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	padding: 1px 6px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	background: var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+/* Bild-Vorschauen unter gesendeten Nachrichten. */
+.euridian-msg-images {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 4px;
+	justify-content: flex-end;
+}
+.euridian-msg-thumb {
+	max-width: 120px;
+	max-height: 120px;
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+	object-fit: cover;
+}
+
+/* Drop-Overlay beim Drag & Drop externer Dateien. */
+.euridian-drop-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 20;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--background-primary);
+	opacity: 0.96;
+	border: 2px dashed var(--interactive-accent);
+	border-radius: var(--radius-m);
+	pointer-events: none;
+}
+.euridian-drop-overlay.is-hidden {
+	display: none;
+}
+.euridian-drop-hint {
+	text-align: center;
+	color: var(--text-normal);
+	font-weight: 600;
+}
+.euridian-drop-icon {
+	display: inline-flex;
+	margin-bottom: 6px;
+	color: var(--interactive-accent);
+}
+.euridian-drop-icon svg {
+	width: 32px;
+	height: 32px;
+}
+.euridian-drop-sub {
+	margin-top: 4px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 400;
+	color: var(--text-muted);
+}
+
+/* Settings-Textarea etwas höher. */
+.euridian-settings-textarea {
+	width: 100%;
+	min-height: 60px;
+}
+
+/* --- Inline-Edit-Modal + Diff --- */
+.euridian-inline-modal {
+	max-width: 640px;
+}
+.euridian-inline-label {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin: 8px 0 4px;
+}
+.euridian-inline-label.euridian-warn {
+	color: var(--text-error);
+	font-weight: 600;
+}
+.euridian-inline-original {
+	max-height: 160px;
+	overflow-y: auto;
+	padding: 8px 10px;
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	white-space: pre-wrap;
+	font-size: var(--font-ui-small);
+}
+.euridian-diff {
+	max-height: 320px;
+	overflow-y: auto;
+	padding: 8px 10px;
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	white-space: pre-wrap;
+	font-size: var(--font-ui-small);
+	line-height: 1.5;
+}
+.euridian-diff-add {
+	background: rgba(var(--color-green-rgb), 0.22);
+	border-radius: 2px;
+}
+.euridian-diff-del {
+	background: rgba(var(--color-red-rgb), 0.22);
+	border-radius: 2px;
+	text-decoration: line-through;
+	opacity: 0.8;
+}
+
+/* Preiszeile unter dem Modell-Dropdown. */
+.euridian-price-info {
+	margin: -6px 0 12px 0;
+	padding: 6px 10px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-normal);
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+}
+.euridian-price-muted {
+	color: var(--text-muted);
+}
