@@ -1,8 +1,8 @@
 {
   "id": "self-hosted-llm-vault-agent",
   "name": "Self-hosted LLM Vault Agent",
-  "version": "0.1.1",
-  "minAppVersion": "1.8.0",
+  "version": "0.1.2",
+  "minAppVersion": "1.8.7",
   "description": "Chat with your notes using your own LLM server (Ollama, vLLM, LM Studio) and let it read, search and write notes, with web search.",
   "author": "Johannes Luschow",
   "authorUrl": "https://github.com/jlueschow",

@@ -217,7 +217,7 @@ export class EuridianApiClient {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
-						"Content-Length": Buffer.byteLength(bodyStr),
+						"Content-Length": new TextEncoder().encode(bodyStr).length,
 						...endpoint.headers,
 					},
 				},

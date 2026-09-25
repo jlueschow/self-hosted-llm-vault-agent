@@ -418,9 +418,11 @@ async function extractPdfText(data: ArrayBuffer): Promise<string> {
 
 /** Liest die angegebenen Dateien aus einem Zip (docx/pptx sind Zip-Container). */
 function unzipFiles(data: ArrayBuffer, wanted: (name: string) => boolean): Record<string, string> {
-	const files = unzipSync(new Uint8Array(data), { filter: (f) => wanted(f.name) });
+	const files = unzipSync(new Uint8Array(data), {
+		filter: (f) => wanted(f.name),
+	}) as Record<string, Uint8Array>;
 	const out: Record<string, string> = {};
-	for (const [name, bytes] of Object.entries(files)) out[name] = strFromU8(bytes);
+	for (const name of Object.keys(files)) out[name] = strFromU8(files[name]);
 	return out;
 }
 

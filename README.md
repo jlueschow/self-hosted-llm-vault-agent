@@ -160,7 +160,8 @@ cd self-hosted-llm-vault-agent
 npm install
 export EURIDIAN_PLUGIN_DIR="/path/to/YourVault/.obsidian/plugins/self-hosted-llm-vault-agent"
 npm run dev      # watch, rebuild and deploy on every change
-npm run build    # production build + deploy
+npm run build         # production build (dist/main.js)
+npm run build:deploy  # production build + copy into your vault
 ```
 
 `src/core` is a **copy** of the shared core from the Euridian repo — do not edit it
