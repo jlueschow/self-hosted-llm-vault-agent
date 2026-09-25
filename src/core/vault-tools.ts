@@ -21,8 +21,7 @@ import { ToolCall, ToolDefinition } from "./types";
 // Extraktion über getTextContent() kommt ganz ohne Canvas aus.
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { PDF_WORKER_SOURCE } from "./pdf-worker-source";
-import * as mammoth from "mammoth";
-import JSZip from "jszip";
+import { strFromU8, unzipSync } from "fflate";
 
 /** Max. Zeichen, die ein read_note an das Modell zurückgibt (Token-Schutz). */
 const MAX_READ_CHARS = 40_000;
@@ -411,42 +410,56 @@ async function extractPdfText(data: ArrayBuffer): Promise<string> {
 		}
 		// Seitenzahl explizit voranstellen — sonst muss das Modell sie aus dem
 		// Fließtext raten (z. B. übers Inhaltsverzeichnis), was leicht danebengeht.
-		return `[Dokument hat ${pdf.numPages} Seite(n)]\n\n${pageTexts.join("\n\n")}`;
+		return `[Document has ${pdf.numPages} page(s)]\n\n${pageTexts.join("\n\n")}`;
 	} finally {
 		await pdf.destroy();
 	}
 }
 
-async function extractDocxText(data: ArrayBuffer): Promise<string> {
-	// mammoths Node-Build (lib/unzip.js) kennt nur {path|buffer|file}, nicht
-	// {arrayBuffer} (das ist ein reiner Browser-Pfad) — deshalb hier explizit
-	// in einen Node-Buffer wandeln statt das rohe ArrayBuffer durchzureichen.
-	const result = await mammoth.extractRawText({
-		buffer: Buffer.from(new Uint8Array(data)),
+/** Liest die angegebenen Dateien aus einem Zip (docx/pptx sind Zip-Container). */
+function unzipFiles(data: ArrayBuffer, wanted: (name: string) => boolean): Record<string, string> {
+	const files = unzipSync(new Uint8Array(data), { filter: (f) => wanted(f.name) });
+	const out: Record<string, string> = {};
+	for (const [name, bytes] of Object.entries(files)) out[name] = strFromU8(bytes);
+	return out;
+}
+
+/** Text einer OOXML-Datei, Absatz für Absatz. `run` = Text-Element (w:t bzw. a:t). */
+function xmlParagraphs(xml: string, paragraph: string, run: string): string[] {
+	const doc = new DOMParser().parseFromString(xml, "application/xml");
+	return Array.from(doc.getElementsByTagNameNS("*", paragraph)).map((p) => {
+		let text = "";
+		const walk = (node: Element): void => {
+			for (const child of Array.from(node.children)) {
+				if (child.localName === run) text += child.textContent ?? "";
+				else if (child.localName === "tab") text += "\t";
+				else if (child.localName === "br" || child.localName === "cr") text += "\n";
+				else walk(child);
+			}
+		};
+		walk(p);
+		return text;
 	});
-	return result.value;
+}
+
+/** Extrahiert reinen Fließtext aus einer .docx (Hauptteil, Absätze getrennt). */
+function extractDocxText(data: ArrayBuffer): string {
+	const files = unzipFiles(data, (n) => n === "word/document.xml");
+	const xml = files["word/document.xml"];
+	if (!xml) throw new Error("word/document.xml not found");
+	return xmlParagraphs(xml, "p", "t").join("\n");
 }
 
 /** Extrahiert reinen Fließtext aus allen Folien einer .pptx (Zip aus Slide-XML). */
-async function extractPptxText(data: ArrayBuffer): Promise<string> {
-	const zip = await JSZip.loadAsync(data);
-	const slideFiles = Object.keys(zip.files)
-		.filter((p) => /^ppt\/slides\/slide\d+\.xml$/.test(p))
-		.sort((a, b) => {
-			const na = parseInt(a.match(/slide(\d+)\.xml/)?.[1] ?? "0", 10);
-			const nb = parseInt(b.match(/slide(\d+)\.xml/)?.[1] ?? "0", 10);
-			return na - nb;
-		});
-
+function extractPptxText(data: ArrayBuffer): string {
+	const slideNumber = (path: string): number =>
+		parseInt(/slide(\d+)\.xml$/.exec(path)?.[1] ?? "0", 10);
+	const files = unzipFiles(data, (n) => /^ppt\/slides\/slide\d+\.xml$/.test(n));
 	const slideTexts: string[] = [];
-	for (const path of slideFiles) {
-		const xml = await zip.files[path].async("text");
-		// Text-Runs stehen in <a:t>…</a:t> — reicht für reinen Fließtext, ohne
-		// eine volle XML-Parser-Abhängigkeit einzuführen.
-		const matches = [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]);
-		if (matches.length > 0) {
-			const slideNum = path.match(/slide(\d+)\.xml/)?.[1] ?? "?";
-			slideTexts.push(`--- Folie ${slideNum} ---\n${matches.join(" ")}`);
+	for (const path of Object.keys(files).sort((a, b) => slideNumber(a) - slideNumber(b))) {
+		const lines = xmlParagraphs(files[path], "p", "t").filter((l) => l.trim());
+		if (lines.length > 0) {
+			slideTexts.push(`--- Slide ${slideNumber(path)} ---\n${lines.join("\n")}`);
 		}
 	}
 	return slideTexts.join("\n\n");
@@ -471,10 +484,10 @@ async function readDocument(app: App, path: string): Promise<string> {
 				text = await extractPdfText(data);
 				break;
 			case "docx":
-				text = await extractDocxText(data);
+				text = extractDocxText(data);
 				break;
 			case "pptx":
-				text = await extractPptxText(data);
+				text = extractPptxText(data);
 				break;
 			default:
 				return `Error: file type ".${ext}" is not supported.`;

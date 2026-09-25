@@ -148,10 +148,9 @@ The plugin bundles these libraries (their licenses apply):
 | Library | Purpose | License |
 |---|---|---|
 | [pdf.js](https://github.com/mozilla/pdf.js) (`pdfjs-dist`) | Read PDF files | Apache-2.0 |
-| [mammoth](https://github.com/mwilliamson/mammoth.js) | Read DOCX files | BSD-2-Clause |
-| [JSZip](https://github.com/Stuk/jszip) | Read PPTX files | MIT (dual-licensed MIT or GPL-3.0-or-later) |
+| [fflate](https://github.com/101arrowz/fflate) | Unzip DOCX and PPTX files (text is then read with the browser's XML parser) | MIT |
 
-The bundled `main.js` is minified but not obfuscated; the full source is in this repository.
+The bundled `main.js` is minified but not obfuscated; the full source is in this repository. pdf.js contains a one-time feature check (`new Function("")`) that the plugin does not use for anything else; the plugin itself runs no dynamically generated code.
 
 ## 🔧 Development
 

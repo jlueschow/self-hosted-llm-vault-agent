@@ -1,15 +1,15 @@
 {
   "name": "self-hosted-llm-vault-agent",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Chat with your notes using a self-hosted LLM (Ollama, vLLM, LM Studio or any OpenAI-compatible server) — with a vault agent that reads, searches and writes notes.",
   "main": "dist/main.js",
   "scripts": {
     "predev": "node scripts/generate-pdf-worker.mjs",
     "dev": "node esbuild.config.mjs",
     "prepackage": "node scripts/generate-pdf-worker.mjs",
-    "package": "esbuild src/main.ts --bundle --format=cjs --platform=node --external:obsidian --external:@codemirror --minify --outfile=dist/main.js",
+    "package": "esbuild src/main.ts --bundle --format=cjs --platform=node --external:obsidian --external:@codemirror --alias:fflate=./node_modules/fflate/esm/browser.js --minify --outfile=dist/main.js",
     "build": "npm run package && node scripts/deploy.mjs",
-    "build:debug": "node scripts/generate-pdf-worker.mjs && esbuild src/main.ts --bundle --format=cjs --platform=node --external:obsidian --external:@codemirror --outfile=dist/main.js && node scripts/deploy.mjs",
+    "build:debug": "node scripts/generate-pdf-worker.mjs && esbuild src/main.ts --bundle --format=cjs --platform=node --external:obsidian --external:@codemirror --alias:fflate=./node_modules/fflate/esm/browser.js --outfile=dist/main.js && node scripts/deploy.mjs",
     "deploy": "node scripts/deploy.mjs"
   },
   "keywords": [
@@ -34,8 +34,7 @@
     "typescript": "4.7.4"
   },
   "dependencies": {
-    "jszip": "^3.10.1",
-    "mammoth": "^1.12.2",
-    "pdfjs-dist": "^5.4.296"
+    "pdfjs-dist": "^5.4.296",
+    "fflate": "^0.8.3"
   }
 }

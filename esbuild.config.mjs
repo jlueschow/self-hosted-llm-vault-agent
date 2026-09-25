@@ -28,6 +28,8 @@ const buildOptions = {
 	bundle: true,
 	platform: "node",
 	external: ["obsidian", "electron", "@codemirror", "@lezer"],
+	// fflate: Browser-Build statt Node-Build (der zieht worker_threads mit).
+	alias: { fflate: "./node_modules/fflate/esm/browser.js" },
 	format: "cjs",
 	target: "ES6",
 	logLevel: "info",
