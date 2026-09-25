@@ -67,11 +67,11 @@ export class InlineEditModal extends Modal {
 		contentEl.empty();
 		contentEl.createEl("h3", { text: "Inline-Edit" });
 
-		contentEl.createEl("div", {
+		contentEl.createDiv({
 			cls: "euridian-inline-label",
 			text: "Markierter Text:",
 		});
-		contentEl.createEl("div", {
+		contentEl.createDiv({
 			cls: "euridian-inline-original",
 			text: this.original,
 		});
@@ -161,11 +161,11 @@ export class InlineEditModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.createEl("h3", { text: "Inline-Edit" });
-		contentEl.createEl("div", {
+		contentEl.createDiv({
 			cls: "euridian-inline-label",
 			text: "Wird bearbeitet …",
 		});
-		const genEl = contentEl.createEl("div", {
+		const genEl = contentEl.createDiv({
 			cls: "euridian-inline-original",
 		});
 
@@ -183,7 +183,7 @@ export class InlineEditModal extends Modal {
 		contentEl.createEl("h3", { text: "Inline-Edit — Vorschau" });
 
 		if (this.revised === this.original) {
-			contentEl.createEl("div", {
+			contentEl.createDiv({
 				cls: "euridian-inline-label",
 				text: "Keine Änderung vorgeschlagen.",
 			});
@@ -217,7 +217,7 @@ export class InlineEditModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.createEl("h3", { text: "Inline-Edit — Fehler" });
-		contentEl.createEl("div", { cls: "euridian-error", text: `⚠ ${msg}` });
+		contentEl.createDiv({ cls: "euridian-error", text: `⚠ ${msg}` });
 		new Setting(contentEl)
 			.addButton((b) =>
 				b.setButtonText("Schließen").onClick(() => this.close())

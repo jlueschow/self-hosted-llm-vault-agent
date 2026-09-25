@@ -31,7 +31,7 @@ export default class EuridianPlugin extends Plugin {
 
 		// Ribbon-Icon (BMP-sicheres Lucide-Icon, kein Farb-Emoji).
 		this.addRibbonIcon("message-circle", `${VARIANT.name}: Chat öffnen`, () => {
-			this.activateView();
+			void this.activateView();
 		});
 
 		// Command zum Öffnen der Chat-View.
@@ -179,6 +179,6 @@ export default class EuridianPlugin extends Plugin {
 			});
 		}
 
-		if (leaf) workspace.revealLeaf(leaf);
+		if (leaf) await workspace.revealLeaf(leaf);
 	}
 }

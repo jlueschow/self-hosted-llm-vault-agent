@@ -40,7 +40,7 @@ class ConfirmWriteModal extends Modal {
 		contentEl.empty();
 
 		contentEl.createEl("h3", { text: "Schreibaktion bestätigen" });
-		contentEl.createEl("div", {
+		contentEl.createDiv({
 			cls: "euridian-inline-label",
 			text: this.headline(),
 		});
@@ -58,7 +58,7 @@ class ConfirmWriteModal extends Modal {
 				delta < 0
 					? `  ⚠ ${oldLen} → ${newLen} Zeichen (${delta})`
 					: `  ${oldLen} → ${newLen} Zeichen (+${delta})`;
-			contentEl.createEl("div", {
+			contentEl.createDiv({
 				cls:
 					"euridian-inline-label" +
 					(delta < 0 ? " euridian-warn" : ""),
@@ -67,7 +67,7 @@ class ConfirmWriteModal extends Modal {
 			const diffEl = contentEl.createDiv({ cls: "euridian-diff" });
 			renderDiffInto(diffEl, diffWords(this.currentContent, this.action.content));
 		} else {
-			contentEl.createEl("div", {
+			contentEl.createDiv({
 				cls: "euridian-inline-original",
 				text: this.action.content || "(leerer Inhalt)",
 			});
@@ -158,13 +158,13 @@ class ConfirmInsertModal extends Modal {
 		contentEl.empty();
 
 		contentEl.createEl("h3", { text: "In Notiz einfügen?" });
-		contentEl.createEl("div", {
+		contentEl.createDiv({
 			cls: "euridian-inline-label euridian-warn",
 			text:
 				`⚠ In "${this.noteName}" ist noch Text markiert — dieser wird ` +
 				"durch die Antwort ersetzt. Ist das wirklich die richtige Notiz?",
 		});
-		contentEl.createEl("div", {
+		contentEl.createDiv({
 			cls: "euridian-inline-original",
 			text: this.selectedText,
 		});

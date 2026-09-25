@@ -61,7 +61,6 @@ export function renderServerSettings(host: SettingsHost): void {
 	const { containerEl } = host;
 	const s = host.plugin.settings;
 
-	containerEl.createEl("h3", { text: "Server" });
 	containerEl.createEl("p", {
 		cls: "setting-item-description",
 		text:

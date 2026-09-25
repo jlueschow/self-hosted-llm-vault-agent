@@ -20,6 +20,8 @@
  *   Verbindungstest/Modell-Liste laufen immer über `requestUrl`.
  */
 
+import * as http from "http";
+import * as https from "https";
 import { requestUrl } from "obsidian";
 import {
 	ApiMessage,
@@ -151,14 +153,9 @@ export class EuridianApiClient {
 
 	/** Lädt Node's `http`/`https`-Modul passend zum Protokoll, oder null. */
 	private getNodeHttp(url: string): NodeHttpModule | null {
-		try {
-			// `require` existiert im Electron-Renderer, nicht auf Mobile.
-			if (typeof require === "undefined") return null;
-			const isHttps = url.startsWith("https:");
-			return require(isHttps ? "https" : "http") as NodeHttpModule;
-		} catch {
-			return null;
-		}
+		// Das Plugin ist desktop-only (Electron), Node-Module sind dort vorhanden.
+		const mod: unknown = url.startsWith("https:") ? https : http;
+		return mod as NodeHttpModule;
 	}
 
 	/** Echtes Streaming über Node's http(s).request — CORS-frei. */
@@ -186,16 +183,16 @@ export class EuridianApiClient {
 			// Vor dem ersten Byte gilt ein deutlich großzügigeres Limit, da
 			// Server mit Warteschlange (begrenzte Parallelität) dort legitim
 			// lange nichts senden — siehe STREAM_QUEUE_TIMEOUT_MS.
-			let idleTimer: ReturnType<typeof setTimeout> | null = null;
+			let idleTimer: number | null = null;
 			let settled = false;
 			let receivedFirstByte = false;
 			const resetIdleTimer = () => {
-				if (idleTimer !== null) clearTimeout(idleTimer);
+				if (idleTimer !== null) window.clearTimeout(idleTimer);
 				if (settled) return;
 				const timeoutMs = receivedFirstByte
 					? STREAM_IDLE_TIMEOUT_MS
 					: STREAM_QUEUE_TIMEOUT_MS;
-				idleTimer = setTimeout(() => {
+				idleTimer = window.setTimeout(() => {
 					const timeoutErr = new Error("idle-timeout") as Error & {
 						euridianIdleTimeout?: true;
 						euridianQueueTimeout?: boolean;
@@ -207,7 +204,7 @@ export class EuridianApiClient {
 			};
 			const clearIdleTimer = () => {
 				settled = true;
-				if (idleTimer !== null) clearTimeout(idleTimer);
+				if (idleTimer !== null) window.clearTimeout(idleTimer);
 			};
 			resetIdleTimer();
 
@@ -357,30 +354,29 @@ export class EuridianApiClient {
 			throw this.mapHttpError(res.status, res.text ?? "", endpoint);
 		}
 
-		const message = res.json?.choices?.[0]?.message;
+		const json = res.json as
+			| {
+					choices?: { message?: NonStreamMessage }[];
+					usage?: RawUsage;
+			  }
+			| undefined;
+		const message = json?.choices?.[0]?.message;
 		const content: string = message?.content ?? "";
 		if (content) callbacks.onToken(content);
 
-		if (res.json?.usage && callbacks.onUsage) {
-			callbacks.onUsage(this.mapUsage(res.json.usage));
+		if (json?.usage && callbacks.onUsage) {
+			callbacks.onUsage(this.mapUsage(json.usage));
 		}
 
 		// Tool-Calls aus der nicht-gestreamten Antwort übernehmen.
-		const toolCalls: ToolCall[] = Array.isArray(message?.tool_calls)
-			? message.tool_calls.map(
-					(tc: {
-						id?: string;
-						function?: { name?: string; arguments?: string };
-					}) => ({
-						id: tc.id ?? "",
-						type: "function" as const,
-						function: {
-							name: tc.function?.name ?? "",
-							arguments: tc.function?.arguments ?? "",
-						},
-					})
-			  )
-			: [];
+		const toolCalls: ToolCall[] = (message?.tool_calls ?? []).map((tc) => ({
+			id: tc.id ?? "",
+			type: "function" as const,
+			function: {
+				name: tc.function?.name ?? "",
+				arguments: tc.function?.arguments ?? "",
+			},
+		}));
 
 		return { content, toolCalls };
 	}
@@ -418,7 +414,7 @@ export class EuridianApiClient {
 
 		let chunk: StreamChunk;
 		try {
-			chunk = JSON.parse(payload);
+			chunk = JSON.parse(payload) as StreamChunk;
 		} catch {
 			return; // Keep-Alive / unvollständiges JSON ignorieren.
 		}
@@ -450,11 +446,7 @@ export class EuridianApiClient {
 		}
 	}
 
-	private mapUsage(raw: {
-		prompt_tokens?: number;
-		completion_tokens?: number;
-		total_tokens?: number;
-	}): TokenUsage {
+	private mapUsage(raw: RawUsage): TokenUsage {
 		return {
 			promptTokens: raw.prompt_tokens ?? 0,
 			completionTokens: raw.completion_tokens ?? 0,
@@ -488,7 +480,7 @@ export class EuridianApiClient {
 			throw this.mapHttpError(res.status, res.text ?? "", endpoint);
 		}
 
-		const data = res.json?.data;
+		const data = (res.json as { data?: { id?: string }[] } | undefined)?.data;
 		if (!Array.isArray(data)) return [];
 		return data
 			.map((m: { id?: string }) => m.id)
@@ -588,6 +580,22 @@ export class EuridianApiClient {
 	private offlineHint(endpoint: ResolvedEndpoint): string {
 		return endpoint.offlineHint ?? "Internetverbindung prüfen.";
 	}
+}
+
+/** Token-Verbrauch, wie ihn die API meldet. */
+interface RawUsage {
+	prompt_tokens?: number;
+	completion_tokens?: number;
+	total_tokens?: number;
+}
+
+/** Nachricht in einer nicht gestreamten Antwort. */
+interface NonStreamMessage {
+	content?: string;
+	tool_calls?: {
+		id?: string;
+		function?: { name?: string; arguments?: string };
+	}[];
 }
 
 /** Minimale Typ-Beschreibung des genutzten Node-http(s)-Moduls. */

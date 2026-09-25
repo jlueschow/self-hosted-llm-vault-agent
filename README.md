@@ -131,6 +131,29 @@ plugin converts the Ollama/custom settings into the server settings.
 - Servers or proxies that drop connections silently: the plugin aborts a stream
   after 90 s of complete silence and shows an error.
 
+## ℹ️ Requirements and disclosures
+
+- **No account or payment required** by the plugin. You need access to an
+  OpenAI-compatible server (your own, or one provided to you). Web search with
+  Brave needs a free Brave Search API key; DuckDuckGo needs nothing.
+- **Network use.** See the table under *Privacy & network use*. Nothing is sent
+  anywhere until you send a message, load the model list, or run a web search.
+- **No telemetry, no ads, no self-updates.**
+- **Not affiliated.** The plugin is independent of Ollama, vLLM, LM Studio,
+  DuckDuckGo and Brave; the names only describe compatible software.
+
+## 📦 Third-party software
+
+The plugin bundles these libraries (their licenses apply):
+
+| Library | Purpose | License |
+|---|---|---|
+| [pdf.js](https://github.com/mozilla/pdf.js) (`pdfjs-dist`) | Read PDF files | Apache-2.0 |
+| [mammoth](https://github.com/mwilliamson/mammoth.js) | Read DOCX files | BSD-2-Clause |
+| [JSZip](https://github.com/Stuk/jszip) | Read PPTX files | MIT (dual-licensed MIT or GPL-3.0-or-later) |
+
+The bundled `main.js` is minified but not obfuscated; the full source is in this repository.
+
 ## 🔧 Development
 
 ```bash

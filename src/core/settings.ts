@@ -106,7 +106,7 @@ export class EuridianSettingTab extends PluginSettingTab {
 					return dd
 						.setValue(s.backend)
 						.onChange(async (value) => {
-							s.backend = value as PluginSettings["backend"];
+							s.backend = value;
 							await this.plugin.saveSettings();
 							this.display(); // UI neu rendern (zeigt passende Felder)
 						});
@@ -117,7 +117,7 @@ export class EuridianSettingTab extends PluginSettingTab {
 		providerFor(s.backend).renderSettings(this);
 
 		// --- Gemeinsame Verhaltens-Einstellungen ---
-		containerEl.createEl("h3", { text: "Verhalten" });
+		new Setting(containerEl).setName("Verhalten").setHeading();
 
 		new Setting(containerEl)
 			.setName("Vault-Agent")
@@ -165,7 +165,7 @@ export class EuridianSettingTab extends PluginSettingTab {
 
 		if (!s.showAdvancedSettings) return;
 
-		containerEl.createEl("h3", { text: "Erweitert" });
+		new Setting(containerEl).setName("Erweitert").setHeading();
 		providerFor(s.backend).renderAdvancedSettings?.(this);
 
 		new Setting(containerEl)
@@ -234,7 +234,6 @@ export class EuridianSettingTab extends PluginSettingTab {
 				sl
 					.setLimits(0, 2, 0.1)
 					.setValue(s.temperature)
-					.setDynamicTooltip()
 					.onChange(async (v) => {
 						s.temperature = v;
 						await this.plugin.saveSettings();
@@ -250,7 +249,6 @@ export class EuridianSettingTab extends PluginSettingTab {
 				sl
 					.setLimits(2, 30, 1)
 					.setValue(s.maxContextMessages)
-					.setDynamicTooltip()
 					.onChange(async (v) => {
 						s.maxContextMessages = v;
 						await this.plugin.saveSettings();
@@ -280,7 +278,7 @@ export class EuridianSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		const s = this.plugin.settings;
 
-		containerEl.createEl("h3", { text: "Websuche (optional)" });
+		new Setting(containerEl).setName("Websuche (optional)").setHeading();
 
 		new Setting(containerEl)
 			.setName("Websuche aktivieren")
@@ -370,7 +368,7 @@ export class EuridianSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		const s = this.plugin.settings;
 
-		containerEl.createEl("h3", { text: "Prompt-Vorlagen (Slash-Commands)" });
+		new Setting(containerEl).setName("Prompt-Vorlagen (Slash-Commands)").setHeading();
 		containerEl.createEl("p", {
 			cls: "setting-item-description",
 			text:

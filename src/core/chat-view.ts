@@ -446,8 +446,8 @@ export class ChatView extends ItemView {
 		this.modelSelectEl = header.createEl("select", {
 			cls: "euridian-model-select dropdown",
 		});
-		this.modelSelectEl.addEventListener("change", async () => {
-			await this.onModelChanged(this.modelSelectEl.value);
+		this.modelSelectEl.addEventListener("change", () => {
+			void this.onModelChanged(this.modelSelectEl.value);
 		});
 		// Beim Öffnen des Dropdowns ggf. Modelle nachladen (Ollama/eigener Server).
 		this.modelSelectEl.addEventListener("focus", () => {
@@ -1460,8 +1460,8 @@ export class ChatView extends ItemView {
 	// ------------------------------------------------------- Datei-Anhänge
 
 	private openFilePicker(): void {
-		new FileSuggestModal(this.app, async (file) => {
-			await this.addVaultAttachment(file);
+		new FileSuggestModal(this.app, (file) => {
+			void this.addVaultAttachment(file);
 		}).open();
 	}
 
@@ -1600,7 +1600,8 @@ export class ChatView extends ItemView {
 		return new Promise<string>((resolve, reject) => {
 			const reader = new FileReader();
 			reader.onload = () => resolve(reader.result as string);
-			reader.onerror = () => reject(reader.error);
+			reader.onerror = () =>
+				reject(reader.error ?? new Error("Datei konnte nicht gelesen werden."));
 			reader.readAsDataURL(file);
 		});
 	}
@@ -1646,7 +1647,10 @@ export class ChatView extends ItemView {
 		function: { name: string; arguments: string };
 	}): WriteAction | null {
 		try {
-			const a = JSON.parse(call.function.arguments || "{}");
+			const a = JSON.parse(call.function.arguments || "{}") as {
+				path?: string;
+				content?: string;
+			};
 			return {
 				tool: call.function.name,
 				path: a.path ?? "",

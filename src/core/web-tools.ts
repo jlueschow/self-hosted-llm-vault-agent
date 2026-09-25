@@ -69,7 +69,7 @@ export async function executeWebToolCall(
 ): Promise<string> {
 	let args: Record<string, string>;
 	try {
-		args = JSON.parse(call.function.arguments || "{}");
+		args = JSON.parse(call.function.arguments || "{}") as Record<string, string>;
 	} catch {
 		return "Fehler: Argumente waren kein gültiges JSON.";
 	}
@@ -211,10 +211,14 @@ async function searchBrave(apiKey: string, query: string): Promise<string> {
 		throw new EuridianError("unknown", `Brave Search: HTTP ${res.status}.`, res.status);
 	}
 
-	const results = res.json?.web?.results;
+	const results = (
+		res.json as
+			| { web?: { results?: { title?: string; url?: string; description?: string }[] } }
+			| undefined
+	)?.web?.results;
 	if (!Array.isArray(results)) return "Keine Suchergebnisse gefunden.";
 	return formatResults(
-		results.map((r: { title?: string; url?: string; description?: string }) => ({
+		results.map((r) => ({
 			title: r.title ?? "",
 			url: r.url ?? "",
 			description: (r.description ?? "").replace(/<[^>]+>/g, "").trim(),

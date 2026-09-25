@@ -232,7 +232,7 @@ export function isWriteTool(name: string): boolean {
 export function describeToolCall(call: ToolCall): string {
 	let arg = "";
 	try {
-		const args = JSON.parse(call.function.arguments || "{}");
+		const args = JSON.parse(call.function.arguments || "{}") as Record<string, string | undefined>;
 		arg = args.path ?? args.query ?? args.folder ?? "";
 	} catch {
 		/* ignore */
@@ -250,7 +250,7 @@ export async function executeToolCall(
 ): Promise<string> {
 	let args: Record<string, string>;
 	try {
-		args = JSON.parse(call.function.arguments || "{}");
+		args = JSON.parse(call.function.arguments || "{}") as Record<string, string>;
 	} catch {
 		return "Fehler: Argumente waren kein gültiges JSON.";
 	}
