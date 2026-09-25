@@ -31,8 +31,10 @@ export interface Provider {
 	 */
 	lazyScan: boolean;
 	storeModels(settings: PluginSettings, names: string[]): void;
-	/** Rendert die Provider-Felder (URL, Key, Modellwahl, …) im Settings-Tab. */
+	/** Rendert die Grundfelder (URL, Key, Modellwahl, Verbindungstest) im Settings-Tab. */
 	renderSettings(host: SettingsHost): void;
+	/** Selten nötige Provider-Optionen; erscheinen nur in der erweiterten Ansicht. */
+	renderAdvancedSettings?(host: SettingsHost): void;
 	/**
 	 * true → das Backend folgt dem gemeinsamen Thinking-Schalter der Einstellungen
 	 * (`enableThinking`). false → der Provider bringt einen eigenen mit.

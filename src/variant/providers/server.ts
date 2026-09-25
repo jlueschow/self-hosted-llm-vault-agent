@@ -47,6 +47,7 @@ export const serverProvider: Provider = {
 		s.serverModels = names;
 	},
 	renderSettings: renderServerSettings,
+	renderAdvancedSettings: renderServerAdvanced,
 	thinking: (s) => s.serverThinking,
 };
 
@@ -98,9 +99,13 @@ export function renderServerSettings(host: SettingsHost): void {
 
 	renderModelSelector(host);
 	renderScanButton(host);
-	renderPreloadButton(host);
-	renderThinkingToggle(host);
 	renderConnectionTest(host);
+}
+
+/** Selten nötig: Modell vorladen und Thinking-Schalter. */
+function renderServerAdvanced(host: SettingsHost): void {
+	renderThinkingToggle(host);
+	renderPreloadButton(host);
 }
 
 /** Modell-Auswahl: Dropdown aus gescannter Liste, sonst Freitext. */

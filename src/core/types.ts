@@ -89,6 +89,8 @@ export interface ResolvedEndpoint {
 
 /** Persistente Plugin-Einstellungen (landen in data.json). */
 export interface PluginSettings extends ProviderSettings {
+	/** Einstellungsseite: erweiterte Optionen einblenden (nur UI-Zustand). */
+	showAdvancedSettings: boolean;
 	/** Aktives Backend. */
 	backend: Backend;
 

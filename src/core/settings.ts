@@ -57,6 +57,7 @@ export const DEFAULT_TEMPLATES: PromptTemplate[] = [
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	...PROVIDER_DEFAULTS,
+	showAdvancedSettings: false,
 	backend: DEFAULT_BACKEND,
 
 	includeCurrentNote: true,
@@ -143,6 +144,28 @@ export class EuridianSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
+
+		this.renderWebSearchSettings();
+
+		// --- Umschalter einfach / erweitert ---
+		new Setting(containerEl)
+			.setName("Erweiterte Einstellungen")
+			.setDesc(
+				"Zeigt weitere Optionen (Kontext, System-Prompt, Temperatur, Vorlagen, …). " +
+					"Die Standardwerte passen für die meisten."
+			)
+			.addToggle((tg) =>
+				tg.setValue(s.showAdvancedSettings).onChange(async (v) => {
+					s.showAdvancedSettings = v;
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+
+		if (!s.showAdvancedSettings) return;
+
+		containerEl.createEl("h3", { text: "Erweitert" });
+		providerFor(s.backend).renderAdvancedSettings?.(this);
 
 		new Setting(containerEl)
 			.setName("Aktuelle Notiz als Kontext")
@@ -247,7 +270,7 @@ export class EuridianSettingTab extends PluginSettingTab {
 				})
 			);
 
-		this.renderWebSearchSettings();
+
 		this.renderPromptTemplates();
 	}
 
@@ -257,26 +280,23 @@ export class EuridianSettingTab extends PluginSettingTab {
 		const s = this.plugin.settings;
 
 		containerEl.createEl("h3", { text: "Websuche (optional)" });
-		containerEl.createEl("p", {
-			cls: "setting-item-description",
-			text:
-				"Gibt dem Agenten ein Websuche-Werkzeug. Läuft immer lokal über " +
-				"deinen Rechner — unabhängig davon, ob dein gewähltes Backend selbst " +
-				"Internetzugang hat. Nützlich z. B. bei einem Server im internen " +
-				"Netz ohne eigene Internetverbindung.",
-		});
 
 		new Setting(containerEl)
 			.setName("Websuche aktivieren")
 			.setDesc(
-				'Fügt dem Agenten das Werkzeug "search_web" hinzu (Brave Search API).'
+				'Fügt dem Agenten das Werkzeug "search_web" hinzu (Brave Search API). ' +
+					"Die Suche läuft immer lokal über deinen Rechner, auch wenn dein " +
+					"Server selbst keinen Internetzugang hat."
 			)
-			.addToggle((t) =>
-				t.setValue(s.enableWebSearch).onChange(async (v) => {
+			.addToggle((tg) =>
+				tg.setValue(s.enableWebSearch).onChange(async (v) => {
 					s.enableWebSearch = v;
 					await this.plugin.saveSettings();
+					this.display();
 				})
 			);
+
+		if (!s.enableWebSearch) return;
 
 		new Setting(containerEl)
 			.setName("Brave Search API-Key")
