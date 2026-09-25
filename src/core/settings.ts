@@ -7,7 +7,7 @@ import { EuridianApiClient } from "./api-client";
 import { providerFor } from "./backend";
 import { DEFAULT_BACKEND, PROVIDERS, VARIANT } from "../variant";
 import { PROVIDER_DEFAULTS } from "../variant/settings";
-import { searchWeb } from "./web-tools";
+import { isWebSearchReady, searchWeb } from "./web-tools";
 import { EuridianError, PluginSettings, PromptTemplate } from "./types";
 import type EuridianPlugin from "./main";
 
@@ -72,6 +72,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	promptTemplates: DEFAULT_TEMPLATES,
 
 	enableWebSearch: false,
+	webSearchProvider: "duckduckgo",
 	braveApiKey: "",
 };
 
@@ -284,7 +285,7 @@ export class EuridianSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Websuche aktivieren")
 			.setDesc(
-				'Fügt dem Agenten das Werkzeug "search_web" hinzu (Brave Search API). ' +
+				'Fügt dem Agenten das Werkzeug "search_web" hinzu. ' +
 					"Die Suche läuft immer lokal über deinen Rechner, auch wenn dein " +
 					"Server selbst keinen Internetzugang hat."
 			)
@@ -299,19 +300,40 @@ export class EuridianSettingTab extends PluginSettingTab {
 		if (!s.enableWebSearch) return;
 
 		new Setting(containerEl)
-			.setName("Brave Search API-Key")
+			.setName("Suchanbieter")
 			.setDesc(
-				"Kostenloser Key unter brave.com/search/api (Free-Tier: 2000 Anfragen/Monat)."
+				"DuckDuckGo braucht keinen Account, ist aber inoffiziell und kann bei " +
+					"vielen Anfragen blockiert werden. Brave Search ist stabiler, braucht " +
+					"aber einen kostenlosen API-Key."
 			)
-			.addText((t) => {
-				t.setPlaceholder("BSA...")
-					.setValue(s.braveApiKey)
+			.addDropdown((dd) =>
+				dd
+					.addOption("duckduckgo", "DuckDuckGo (ohne Account)")
+					.addOption("brave", "Brave Search (API-Key)")
+					.setValue(s.webSearchProvider)
 					.onChange(async (v) => {
-						s.braveApiKey = v.trim();
+						s.webSearchProvider = v as PluginSettings["webSearchProvider"];
 						await this.plugin.saveSettings();
-					});
-				t.inputEl.type = "password";
-			});
+						this.display();
+					})
+			);
+
+		if (s.webSearchProvider === "brave") {
+			new Setting(containerEl)
+				.setName("Brave Search API-Key")
+				.setDesc(
+					"Kostenloser Key unter brave.com/search/api (Free-Tier: 2000 Anfragen/Monat)."
+				)
+				.addText((t) => {
+					t.setPlaceholder("BSA...")
+						.setValue(s.braveApiKey)
+						.onChange(async (v) => {
+							s.braveApiKey = v.trim();
+							await this.plugin.saveSettings();
+						});
+					t.inputEl.type = "password";
+				});
+		}
 
 		new Setting(containerEl)
 			.setName("Verbindung testen")
@@ -320,14 +342,16 @@ export class EuridianSettingTab extends PluginSettingTab {
 				btn
 					.setButtonText("Testen")
 					.onClick(async () => {
-						if (!s.braveApiKey.trim()) {
+						if (!isWebSearchReady(s)) {
 							new Notice("Erst den API-Key eintragen.");
 							return;
 						}
 						btn.setDisabled(true).setButtonText("Teste …");
 						try {
-							await searchWeb(s.braveApiKey.trim(), "test");
-							new Notice("✓ Brave Search erreichbar.");
+							await searchWeb(s, "test");
+							new Notice(
+								`✓ ${s.webSearchProvider === "brave" ? "Brave Search" : "DuckDuckGo"} erreichbar.`
+							);
 						} catch (err) {
 							const msg =
 								err instanceof EuridianError

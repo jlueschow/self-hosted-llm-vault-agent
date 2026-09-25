@@ -88,6 +88,9 @@ export interface ResolvedEndpoint {
 }
 
 /** Persistente Plugin-Einstellungen (landen in data.json). */
+/** Anbieter der Websuche: DuckDuckGo (ohne Key) oder Brave Search API. */
+export type WebSearchProvider = "duckduckgo" | "brave";
+
 export interface PluginSettings extends ProviderSettings {
 	/** Einstellungsseite: erweiterte Optionen einblenden (nur UI-Zustand). */
 	showAdvancedSettings: boolean;
@@ -133,6 +136,8 @@ export interface PluginSettings extends ProviderSettings {
 	 * Modell selbst auf einem Server ohne Internetzugang läuft. Default AUS.
 	 */
 	enableWebSearch: boolean;
+	/** Welcher Suchanbieter genutzt wird. */
+	webSearchProvider: WebSearchProvider;
 	/** Brave-Search-API-Key (kostenloser Tier verfügbar). */
 	braveApiKey: string;
 }

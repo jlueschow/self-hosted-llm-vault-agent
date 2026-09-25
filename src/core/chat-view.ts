@@ -33,7 +33,12 @@ import {
 	getToolDefinitions,
 	isWriteTool,
 } from "./vault-tools";
-import { executeWebToolCall, getWebToolDefinitions, isWebTool } from "./web-tools";
+import {
+	executeWebToolCall,
+	getWebToolDefinitions,
+	isWebSearchReady,
+	isWebTool,
+} from "./web-tools";
 import { WriteAction, confirmInsert, confirmWrite } from "./confirm-write-modal";
 import {
 	ApiMessage,
@@ -1258,7 +1263,7 @@ export class ChatView extends ItemView {
 			const useAgent = this.plugin.settings.enableVaultAgent;
 			const useWeb =
 				this.plugin.settings.enableWebSearch &&
-				!!this.plugin.settings.braveApiKey.trim();
+				isWebSearchReady(this.plugin.settings);
 			// Vault-Agent und Websuche sind unabhängige Schalter — beide, eines
 			// oder keines kann aktiv sein. Tools nur senden, wenn mind. eines an ist.
 			const tools: ToolDefinition[] | undefined =
@@ -1408,10 +1413,7 @@ export class ChatView extends ItemView {
 						"zusammen, was du bisher gefunden hast.";
 				} else if (isWebTool(call.function.name)) {
 					// Websuche ist rein lesend — keine Schreib-Bestätigung nötig.
-					output = await executeWebToolCall(
-						this.plugin.settings.braveApiKey.trim(),
-						call
-					);
+					output = await executeWebToolCall(this.plugin.settings, call);
 					chipEl.addClass("is-done");
 				} else {
 					const needsConfirm =
@@ -1735,7 +1737,7 @@ export class ChatView extends ItemView {
 		if (s.systemPrompt.trim()) systemParts.push(s.systemPrompt.trim());
 
 		// Agent-Mandat ans Ende. Vault-Agent und Websuche sind unabhängig schaltbar.
-		const useWebForPrompt = s.enableWebSearch && !!s.braveApiKey.trim();
+		const useWebForPrompt = s.enableWebSearch && isWebSearchReady(s);
 		if (s.enableVaultAgent || useWebForPrompt) {
 			systemParts.push(buildAgentSystemPrompt(s.enableVaultAgent, useWebForPrompt));
 		}

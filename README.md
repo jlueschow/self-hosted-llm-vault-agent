@@ -34,7 +34,7 @@ note's entire content**. This means the model can modify your files.
 - 🤖 **Vault agent** (function calling) — read, search, create, append and edit
   notes on request, with confirmation + diff preview before any write
 - 📄 **Documents** — the agent can also read PDF, DOCX and PPTX files in your vault
-- 🌐 **Optional web search** (Brave Search API), off by default
+- 🌐 **Optional web search** — DuckDuckGo (no account) or Brave Search API, off by default
 - 📎 **Attachments** — drag & drop files/images, attach vault notes or the current
   editor selection
 - ⚡ **Slash commands** — reusable prompt templates (`/zusammenfassen`, `/übersetzen`, …)
@@ -63,11 +63,16 @@ parameters) tend to hallucinate results instead of calling tools.
 
 ## 🌐 Web search (optional)
 
-Adds a `search_web` tool via the [Brave Search API](https://brave.com/search/api/)
-(free tier available). It is **off by default**, independent of the vault agent, and
+Adds a `search_web` tool. It is **off by default**, independent of the vault agent, and
 always runs **locally through your own internet connection** — so it also works
 when your model runs on a server without internet access. Enable it in Settings
-→ *Websuche aktivieren* and paste your Brave API key.
+→ *Websuche aktivieren* and pick a provider:
+
+- **DuckDuckGo** (default, no account or key) — reads DuckDuckGo's HTML results
+  page. This is unofficial, so it can break or be blocked with a bot check after
+  many requests.
+- **Brave Search API** — more stable, needs a free API key from
+  [brave.com/search/api](https://brave.com/search/api/) (free tier available).
 
 ## 📝 Custom instructions file
 
@@ -101,7 +106,8 @@ The plugin is desktop-only and sends requests **only to the servers you configur
 | Service | Purpose | Data sent |
 |---|---|---|
 | Your server (Server-URL) | Chat requests, model list, optional Ollama model preload | Your messages, attached files/images, and any note content you ask about or the agent reads |
-| `api.search.brave.com` (only if web search is enabled) | Web search | The search queries the model issues |
+| `html.duckduckgo.com` (only if web search is enabled with DuckDuckGo) | Web search | The search queries the model issues |
+| `api.search.brave.com` (only if web search is enabled with Brave) | Web search | The search queries the model issues |
 
 No telemetry, no other network calls. The optional API key is stored in plain text
 in Obsidian's `data.json` (standard Obsidian behavior). **Server operators can

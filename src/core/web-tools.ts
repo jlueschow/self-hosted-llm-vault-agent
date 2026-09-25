@@ -1,5 +1,6 @@
 /**
- * Euridian — Websuche für den Agenten (Function Calling), via Brave Search API.
+ * Euridian — Websuche für den Agenten (Function Calling): DuckDuckGo (ohne
+ * Account/Key) oder Brave Search API (Key nötig, stabiler).
  *
  * Läuft über Obsidians `requestUrl` auf dem Rechner des Nutzers — nicht über
  * das Modell. So kann auch ein Modell auf einem Server ohne eigenen
@@ -10,7 +11,18 @@
  */
 
 import { requestUrl } from "obsidian";
-import { EuridianError, ToolCall, ToolDefinition } from "./types";
+import { EuridianError, ToolCall, ToolDefinition, WebSearchProvider } from "./types";
+
+/** Was die Suche zum Ausführen braucht. */
+export interface WebSearchConfig {
+	webSearchProvider: WebSearchProvider;
+	braveApiKey: string;
+}
+
+/** Ist die Suche mit dieser Konfiguration nutzbar (Brave braucht einen Key)? */
+export function isWebSearchReady(cfg: WebSearchConfig): boolean {
+	return cfg.webSearchProvider === "duckduckgo" || !!cfg.braveApiKey.trim();
+}
 
 const BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search";
 const MAX_RESULTS = 8;
@@ -23,7 +35,7 @@ export function getWebToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "search_web",
 				description:
-					"Durchsucht das Internet (Brave Search) und gibt Titel, URL und " +
+					"Durchsucht das Internet und gibt Titel, URL und " +
 					"kurze Beschreibung der Top-Treffer zurück. Nutze dies für aktuelle " +
 					"Informationen, die nicht im Vault stehen.",
 				parameters: {
@@ -52,7 +64,7 @@ export function isWebTool(name: string): boolean {
  * kommen als lesbarer Text zurück, damit das Modell darauf reagieren kann.
  */
 export async function executeWebToolCall(
-	braveApiKey: string,
+	cfg: WebSearchConfig,
 	call: ToolCall
 ): Promise<string> {
 	let args: Record<string, string>;
@@ -65,7 +77,7 @@ export async function executeWebToolCall(
 	try {
 		switch (call.function.name) {
 			case "search_web":
-				return await searchWeb(braveApiKey, args.query);
+				return await searchWeb(cfg, args.query);
 			default:
 				return `Fehler: Unbekanntes Werkzeug "${call.function.name}".`;
 		}
@@ -77,21 +89,95 @@ export async function executeWebToolCall(
 }
 
 /**
- * Führt die eigentliche Brave-Suche aus. Wirft `EuridianError` bei Fehlern —
- * wird von `executeWebToolCall` gefangen (modell-seitig) bzw. vom
+ * Führt die Suche mit dem gewählten Anbieter aus. Wirft `EuridianError` bei
+ * Fehlern — wird von `executeWebToolCall` gefangen (modell-seitig) bzw. vom
  * "Verbindung testen"-Button in den Settings direkt genutzt.
  */
-export async function searchWeb(apiKey: string, query: string): Promise<string> {
+export async function searchWeb(cfg: WebSearchConfig, query: string): Promise<string> {
 	if (!query?.trim()) {
 		throw new EuridianError("bad_request", "Leerer Suchbegriff.");
 	}
+	return cfg.webSearchProvider === "brave"
+		? searchBrave(cfg.braveApiKey.trim(), query)
+		: searchDuckDuckGo(query);
+}
+
+const DDG_HTML_URL = "https://html.duckduckgo.com/html/";
+
+/** Formatiert Treffer als nummerierte Liste (Titel, URL, Beschreibung). */
+function formatResults(results: { title: string; url: string; description: string }[]): string {
+	if (results.length === 0) return "Keine Suchergebnisse gefunden.";
+	return results
+		.slice(0, MAX_RESULTS)
+		.map((r, i) => `${i + 1}. ${r.title || "(ohne Titel)"}\n   ${r.url}\n   ${r.description}`)
+		.join("\n\n");
+}
+
+/**
+ * DuckDuckGo ohne Account: liest die HTML-Ergebnisseite. DuckDuckGo bietet dafür
+ * keine offizielle API — die Suche kann sich daher ändern oder bei zu vielen
+ * Anfragen mit einer Bot-Abfrage blockiert werden (dann Brave nutzen).
+ */
+async function searchDuckDuckGo(query: string): Promise<string> {
+	let res;
+	try {
+		res = await requestUrl({
+			url: `${DDG_HTML_URL}?q=${encodeURIComponent(query)}&kl=de-de`,
+			method: "GET",
+			headers: { Accept: "text/html" },
+			throw: false,
+		});
+	} catch {
+		throw new EuridianError(
+			"offline",
+			"DuckDuckGo nicht erreichbar — Internetverbindung prüfen."
+		);
+	}
+
+	const doc = new DOMParser().parseFromString(res.text ?? "", "text/html");
+	const nodes = Array.from(doc.querySelectorAll(".result"));
+	const results: { title: string; url: string; description: string }[] = [];
+	for (const node of nodes) {
+		const link = node.querySelector("a.result__a");
+		if (!link || node.classList.contains("result--ad")) continue;
+		const href = link.getAttribute("href") ?? "";
+		let url = href;
+		try {
+			// Treffer-Links laufen über einen Weiterleiter (?uddg=<ziel-url>).
+			const u = new URL(href, "https://duckduckgo.com");
+			url = u.searchParams.get("uddg") ?? u.toString();
+		} catch {
+			// href unverändert lassen
+		}
+		results.push({
+			title: (link.textContent ?? "").trim(),
+			url,
+			description: (node.querySelector(".result__snippet")?.textContent ?? "").trim(),
+		});
+	}
+
+	if (results.length === 0) {
+		if (res.status === 202 || res.status === 429 || res.text?.includes("anomaly")) {
+			throw new EuridianError(
+				"rate_limit",
+				"DuckDuckGo blockiert die Anfrage (Bot-Abfrage). Später erneut versuchen oder in den Einstellungen Brave Search nutzen.",
+				res.status
+			);
+		}
+		if (res.status >= 400) {
+			throw new EuridianError("unknown", `DuckDuckGo: HTTP ${res.status}.`, res.status);
+		}
+	}
+	return formatResults(results);
+}
+
+async function searchBrave(apiKey: string, query: string): Promise<string> {
 	if (!apiKey) {
 		throw new EuridianError(
 			"auth",
 			"Kein Brave-Search-API-Key hinterlegt (Einstellungen → Websuche)."
 		);
 	}
-
 	let res;
 	try {
 		res = await requestUrl({
@@ -126,20 +212,12 @@ export async function searchWeb(apiKey: string, query: string): Promise<string> 
 	}
 
 	const results = res.json?.web?.results;
-	if (!Array.isArray(results) || results.length === 0) {
-		return "Keine Suchergebnisse gefunden.";
-	}
-
-	return results
-		.slice(0, MAX_RESULTS)
-		.map(
-			(
-				r: { title?: string; url?: string; description?: string },
-				i: number
-			) => {
-				const desc = (r.description ?? "").replace(/<[^>]+>/g, "").trim();
-				return `${i + 1}. ${r.title ?? "(ohne Titel)"}\n   ${r.url ?? ""}\n   ${desc}`;
-			}
-		)
-		.join("\n\n");
+	if (!Array.isArray(results)) return "Keine Suchergebnisse gefunden.";
+	return formatResults(
+		results.map((r: { title?: string; url?: string; description?: string }) => ({
+			title: r.title ?? "",
+			url: r.url ?? "",
+			description: (r.description ?? "").replace(/<[^>]+>/g, "").trim(),
+		}))
+	);
 }

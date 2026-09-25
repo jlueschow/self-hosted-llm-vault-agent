@@ -113,6 +113,10 @@ export default class EuridianPlugin extends Plugin {
 		const sessions = data[SESSIONS_KEY] as SessionsState | undefined;
 		delete data[SESSIONS_KEY];
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+		// Wer bisher Brave mit Key nutzte, bleibt dabei (neuer Standard: DuckDuckGo).
+		if (data.webSearchProvider === undefined && this.settings.braveApiKey) {
+			this.settings.webSearchProvider = "brave";
+		}
 		this.sessions = sessions ?? null;
 	}
 
