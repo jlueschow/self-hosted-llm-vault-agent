@@ -10,6 +10,8 @@
  */
 
 import { App, Notice, TFile, TFolder, normalizePath } from "obsidian";
+import { VARIANT } from "../variant";
+import { t } from "./i18n";
 import { ToolCall, ToolDefinition } from "./types";
 // Direkt pdfjs-dist statt pdf-parse: pdf-parse v2 zieht @napi-rs/canvas (native
 // Node-Addon) hinein und referenziert beim reinen Modul-Import bereits
@@ -58,18 +60,18 @@ export function getToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "list_notes",
 				description:
-					"Listet Markdown-Notizen im Vault auf (Pfad + Dateigröße in Byte), optional " +
-					"gefiltert auf einen Ordner (Präfix). NUTZE DIE DATEIGRÖSSE, um leere/fast-leere " +
-					"Notizen zu erkennen (⚠-Markierung bei ≤50 Byte) — rufe dafür NICHT read_note " +
-					"für jede einzelne Datei auf, das ist unnötig teuer und sprengt bei vielen " +
-					"Dateien den Kontext. read_note nur für Notizen nutzen, deren Inhalt du wirklich brauchst.",
+					"Lists Markdown notes in the vault (path + file size in bytes), optionally " +
+					"filtered to a folder (prefix). USE THE FILE SIZE to spot empty or nearly empty " +
+					"notes (⚠ marker at ≤50 bytes); do NOT call read_note " +
+					"for every single file, which is needlessly expensive and blows the context " +
+					"with many files. Use read_note only for notes whose content you really need.",
 				parameters: {
 					type: "object",
 					properties: {
 						folder: {
 							type: "string",
 							description:
-								"Optionaler Ordner-Präfix, z. B. '03 Projekte'. Leer = ganzer Vault.",
+								"Optional folder prefix, e.g. '03 Projects'. Empty = whole vault.",
 						},
 					},
 				},
@@ -80,13 +82,13 @@ export function getToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "read_note",
 				description:
-					"Liest den vollständigen Inhalt einer Markdown-Notiz aus dem Vault.",
+					"Reads the full content of a Markdown note from the vault.",
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Pfad zur Notiz relativ zum Vault-Root.",
+							description: "Path to the note, relative to the vault root.",
 						},
 					},
 					required: ["path"],
@@ -98,17 +100,17 @@ export function getToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "list_documents",
 				description:
-					"Listet Nicht-Markdown-Dokumente im Vault auf (PDF, DOCX, PPTX) mit Pfad und " +
-					"Dateigröße in Byte, optional gefiltert auf einen Ordner (Präfix). Diese Dateien " +
-					"tauchen NICHT bei list_notes auf. Nutze read_document, um den Textinhalt einer " +
-					"gefundenen Datei zu lesen.",
+					"Lists non-Markdown documents in the vault (PDF, DOCX, PPTX) with path and " +
+					"file size in bytes, optionally filtered to a folder (prefix). These files " +
+					"do NOT appear in list_notes. Use read_document to read the text content of " +
+					"a file you found.",
 				parameters: {
 					type: "object",
 					properties: {
 						folder: {
 							type: "string",
 							description:
-								"Optionaler Ordner-Präfix, z. B. '03 Projekte'. Leer = ganzer Vault.",
+								"Optional folder prefix, e.g. '03 Projects'. Empty = whole vault.",
 						},
 					},
 				},
@@ -119,17 +121,17 @@ export function getToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "read_document",
 				description:
-					"Extrahiert den Textinhalt eines PDF-, Word- (.docx) oder PowerPoint- (.pptx) " +
-					"Dokuments aus dem Vault. Nutze dies für Angebote, Rechnungen, QV-Protokolle, " +
-					"Publikationen oder andere Dateien, die nicht als Markdown-Notiz vorliegen. " +
-					"Bei PDFs mit reinen Bild-Scans (kein eingebetteter Text) kann das Ergebnis leer sein.",
+					"Extracts the text content of a PDF, Word (.docx) or PowerPoint (.pptx) " +
+					"document from the vault. Use it for quotes, invoices, meeting minutes, " +
+					"publications or other files that are not Markdown notes. " +
+					"For PDFs that are pure image scans (no embedded text) the result can be empty.",
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
 							description:
-								"Pfad zum Dokument relativ zum Vault-Root, inkl. Dateiendung (.pdf/.docx/.pptx).",
+								"Path to the document, relative to the vault root, including the extension (.pdf/.docx/.pptx).",
 						},
 					},
 					required: ["path"],
@@ -141,13 +143,13 @@ export function getToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "search_vault",
 				description:
-					"Durchsucht alle Notizen nach einem Suchbegriff (in Dateiname und Inhalt). Gibt Treffer mit Pfad und kurzem Kontext zurück.",
+					"Searches all notes for a search term (file name and content). Returns hits with path and short context.",
 				parameters: {
 					type: "object",
 					properties: {
 						query: {
 							type: "string",
-							description: "Suchbegriff (Groß-/Kleinschreibung egal).",
+							description: "Search term (case-insensitive).",
 						},
 					},
 					required: ["query"],
@@ -159,13 +161,13 @@ export function getToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "create_note",
 				description:
-					"Erstellt eine NEUE Markdown-Notiz mit dem gegebenen Inhalt. Schlägt fehl, wenn die Notiz bereits existiert (dann edit_note oder append_to_note nutzen).",
+					"Creates a NEW Markdown note with the given content. Fails if the note already exists (then use edit_note or append_to_note).",
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Zielpfad relativ zum Vault-Root.",
+							description: "Target path, relative to the vault root.",
 						},
 						content: { type: "string", description: "Markdown-Inhalt." },
 					},
@@ -178,17 +180,17 @@ export function getToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "append_to_note",
 				description:
-					"BEVORZUGT zum Ergänzen: Hängt Text ans Ende einer Notiz an, ohne " +
-					"Bestehendes zu verändern (nicht-destruktiv). Legt die Notiz an, falls " +
-					"sie nicht existiert. Nutze dies, um Notizen zu erweitern/zu ergänzen.",
+					"PREFERRED for adding content: appends text to the end of a note without " +
+					"changing existing content (non-destructive). Creates the note if " +
+					"it does not exist. Use this to extend or add to notes.",
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Pfad relativ zum Vault-Root.",
+							description: "Path, relative to the vault root.",
 						},
-						content: { type: "string", description: "Anzuhängender Text." },
+						content: { type: "string", description: "Text to append." },
 					},
 					required: ["path", "content"],
 				},
@@ -199,19 +201,19 @@ export function getToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "edit_note",
 				description:
-					"GEFÄHRLICH/DESTRUKTIV: Ersetzt den GESAMTEN Inhalt einer Notiz. Alles " +
-					"bisher Vorhandene, das du NICHT mitschickst, geht VERLOREN. Nutze dies " +
-					"NUR, wenn der Nutzer ausdrücklich ein Überschreiben/Neuschreiben will — " +
-					"und gib dann den vollständigen Inhalt inkl. ALLER bestehenden Teile zurück. " +
-					"Zum bloßen Ergänzen stattdessen append_to_note verwenden.",
+					"DANGEROUS/DESTRUCTIVE: Replaces the ENTIRE content of a note. Everything " +
+					"existing that you do NOT send along is LOST. Use this " +
+					"ONLY if the user explicitly wants an overwrite or rewrite, " +
+					"and then return the complete content including ALL existing parts. " +
+					"To merely add content use append_to_note instead.",
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Pfad relativ zum Vault-Root.",
+							description: "Path, relative to the vault root.",
 						},
-						content: { type: "string", description: "Neuer vollständiger Inhalt." },
+						content: { type: "string", description: "New complete content." },
 					},
 					required: ["path", "content"],
 				},
@@ -252,7 +254,7 @@ export async function executeToolCall(
 	try {
 		args = JSON.parse(call.function.arguments || "{}") as Record<string, string>;
 	} catch {
-		return "Fehler: Argumente waren kein gültiges JSON.";
+		return "Error: the arguments were not valid JSON.";
 	}
 
 	try {
@@ -274,10 +276,10 @@ export async function executeToolCall(
 			case "edit_note":
 				return await editNote(app, args.path, args.content);
 			default:
-				return `Fehler: Unbekanntes Werkzeug "${call.function.name}".`;
+				return `Error: unknown tool "${call.function.name}".`;
 		}
 	} catch (err) {
-		return `Fehler bei ${call.function.name}: ${
+		return `Error in ${call.function.name}: ${
 			err instanceof Error ? err.message : String(err)
 		}`;
 	}
@@ -300,9 +302,9 @@ function listNotes(app: App, folder?: string): string {
 		// falsche Schlüsse (z. B. eine veraltete Struktur-Referenz als reale,
 		// aber leere Ordner interpretieren statt als nicht existent).
 		if (prefix && !(app.vault.getAbstractFileByPath(prefix) instanceof TFolder)) {
-			return `Ordner "${folder}" existiert nicht in diesem Vault.`;
+			return `Folder "${folder}" does not exist in this vault.`;
 		}
-		return "Keine Notizen gefunden.";
+		return "No notes found.";
 	}
 
 	// Dateigröße kommt aus Obsidians Metadaten (file.stat), OHNE den Inhalt zu
@@ -311,27 +313,27 @@ function listNotes(app: App, folder?: string): string {
 	// Kontext bei vielen Dateien).
 	const lines = files.slice(0, MAX_LIST).map((f) => {
 		const size = f.stat.size;
-		const flag = size <= NEAR_EMPTY_BYTES ? "  ⚠ nahezu leer" : "";
+		const flag = size <= NEAR_EMPTY_BYTES ? "  ⚠ nearly empty" : "";
 		return `${f.path} (${size} B)${flag}`;
 	});
 	const more =
-		files.length > MAX_LIST ? `\n… und ${files.length - MAX_LIST} weitere.` : "";
-	return `${files.length} Notiz(en) mit Dateigröße (⚠ = ≤${NEAR_EMPTY_BYTES} Byte, vermutlich leer/nur Titel):\n${lines.join("\n")}${more}`;
+		files.length > MAX_LIST ? `\n… and ${files.length - MAX_LIST} more.` : "";
+	return `${files.length} note(s) with file size (⚠ = ≤${NEAR_EMPTY_BYTES} bytes, probably empty or title only):\n${lines.join("\n")}${more}`;
 }
 
 async function readNote(app: App, path: string): Promise<string> {
 	const file = app.vault.getAbstractFileByPath(asNotePath(path));
 	if (!(file instanceof TFile)) {
-		return `Fehler: Notiz "${path}" nicht gefunden.`;
+		return `Error: note "${path}" not found.`;
 	}
 	const content = await app.vault.cachedRead(file);
 	if (content.length > MAX_READ_CHARS) {
 		return (
 			content.slice(0, MAX_READ_CHARS) +
-			`\n\n[… gekürzt, ${content.length - MAX_READ_CHARS} Zeichen ausgelassen]`
+			`\n\n[… truncated, ${content.length - MAX_READ_CHARS} characters omitted]`
 		);
 	}
-	return content || "(leere Notiz)";
+	return content || "(empty note)";
 }
 
 /** Prüft, ob ein Pfad eine der unterstützten Dokument-Endungen hat. */
@@ -349,26 +351,26 @@ function listDocuments(app: App, folder?: string): string {
 	}
 	if (files.length === 0) {
 		if (prefix && !(app.vault.getAbstractFileByPath(prefix) instanceof TFolder)) {
-			return `Ordner "${folder}" existiert nicht in diesem Vault.`;
+			return `Folder "${folder}" does not exist in this vault.`;
 		}
-		return "Keine PDF-, DOCX- oder PPTX-Dateien gefunden.";
+		return "No PDF, DOCX or PPTX files found.";
 	}
 	const lines = files
 		.slice(0, MAX_LIST)
 		.map((f) => `${f.path} (${f.stat.size} B)`);
 	const more =
-		files.length > MAX_LIST ? `\n… und ${files.length - MAX_LIST} weitere.` : "";
+		files.length > MAX_LIST ? `\n… and ${files.length - MAX_LIST} more.` : "";
 	return `${files.length} Dokument(e):\n${lines.join("\n")}${more}`;
 }
 
 /** Kürzt extrahierten Dokumenttext auf das gleiche Budget wie read_note. */
 function truncateDocumentText(text: string): string {
 	const trimmed = text.trim();
-	if (!trimmed) return "(kein Text extrahiert — vermutlich reiner Bild-Scan ohne Text-Layer)";
+	if (!trimmed) return "(no text extracted; probably a pure image scan without a text layer)";
 	if (trimmed.length > MAX_READ_CHARS) {
 		return (
 			trimmed.slice(0, MAX_READ_CHARS) +
-			`\n\n[… gekürzt, ${trimmed.length - MAX_READ_CHARS} Zeichen ausgelassen]`
+			`\n\n[… truncated, ${trimmed.length - MAX_READ_CHARS} characters omitted]`
 		);
 	}
 	return trimmed;
@@ -451,14 +453,14 @@ async function extractPptxText(data: ArrayBuffer): Promise<string> {
 }
 
 async function readDocument(app: App, path: string): Promise<string> {
-	if (!path?.trim()) return "Fehler: kein Pfad angegeben.";
+	if (!path?.trim()) return "Error: no path given.";
 	const file = app.vault.getAbstractFileByPath(normalizePath(path.trim()));
 	if (!(file instanceof TFile)) {
-		return `Fehler: Dokument "${path}" nicht gefunden.`;
+		return `Error: document "${path}" not found.`;
 	}
 	const ext = file.extension.toLowerCase();
 	if (!(DOCUMENT_EXTENSIONS as readonly string[]).includes(ext)) {
-		return `Fehler: Dateityp ".${ext}" wird nicht unterstützt (nur ${DOCUMENT_EXTENSIONS.join(", ")}). Für Markdown-Notizen read_note nutzen.`;
+		return `Error: file type ".${ext}" is not supported (only ${DOCUMENT_EXTENSIONS.join(", ")}). Use read_note for Markdown notes.`;
 	}
 
 	const data = await app.vault.readBinary(file);
@@ -475,11 +477,11 @@ async function readDocument(app: App, path: string): Promise<string> {
 				text = await extractPptxText(data);
 				break;
 			default:
-				return `Fehler: Dateityp ".${ext}" wird nicht unterstützt.`;
+				return `Error: file type ".${ext}" is not supported.`;
 		}
 		return truncateDocumentText(text);
 	} catch (err) {
-		return `Fehler beim Lesen von "${path}": ${
+		return `Error reading "${path}": ${
 			err instanceof Error ? err.message : String(err)
 		}`;
 	}
@@ -498,13 +500,13 @@ function normalizeForSearch(s: string): string {
 }
 
 async function searchVault(app: App, query: string): Promise<string> {
-	if (!query?.trim()) return "Fehler: leerer Suchbegriff.";
+	if (!query?.trim()) return "Error: empty search term.";
 
 	// In Suchwörter zerlegen — ALLE müssen vorkommen (AND), Reihenfolge/Trenner egal.
 	const terms = normalizeForSearch(query)
 		.split(" ")
 		.filter((t) => t.length > 0);
-	if (terms.length === 0) return "Fehler: leerer Suchbegriff.";
+	if (terms.length === 0) return "Error: empty search term.";
 
 	const hits: string[] = [];
 	for (const file of app.vault.getMarkdownFiles()) {
@@ -532,8 +534,8 @@ async function searchVault(app: App, query: string): Promise<string> {
 		hits.push(snippet ? `- ${file.path}: …${snippet}…` : `- ${file.path}`);
 	}
 
-	if (hits.length === 0) return `Keine Treffer für "${query}".`;
-	return `${hits.length} Treffer für "${query}":\n${hits.join("\n")}`;
+	if (hits.length === 0) return `No hits for "${query}".`;
+	return `${hits.length} hit(s) for "${query}":\n${hits.join("\n")}`;
 }
 
 // --------------------------------------------------------------- Schreiben
@@ -545,12 +547,12 @@ async function createNote(
 ): Promise<string> {
 	const target = asNotePath(path);
 	if (app.vault.getAbstractFileByPath(target)) {
-		return `Fehler: "${target}" existiert bereits. Nutze edit_note oder append_to_note.`;
+		return `Error: "${target}" already exists. Use edit_note or append_to_note.`;
 	}
 	await ensureParentFolder(app, target);
 	await app.vault.create(target, content ?? "");
-	new Notice(`Euridian hat Notiz erstellt: ${target}`);
-	return `Notiz "${target}" wurde erstellt.`;
+	new Notice(t("{name} created a note: {path}", { name: VARIANT.name, path: target }));
+	return `Note "${target}" was created.`;
 }
 
 async function appendToNote(
@@ -563,17 +565,17 @@ async function appendToNote(
 
 	if (file instanceof TFile) {
 		await app.vault.append(file, "\n" + (content ?? ""));
-		new Notice(`Euridian hat an Notiz angehängt: ${target}`);
-		return `An "${target}" angehängt.`;
+		new Notice(t("{name} appended to a note: {path}", { name: VARIANT.name, path: target }));
+		return `Appended to "${target}".`;
 	}
 	if (file instanceof TFolder) {
-		return `Fehler: "${target}" ist ein Ordner.`;
+		return `Error: "${target}" is a folder.`;
 	}
 	// Existiert nicht → neu anlegen.
 	await ensureParentFolder(app, target);
 	await app.vault.create(target, content ?? "");
-	new Notice(`Euridian hat Notiz erstellt: ${target}`);
-	return `Notiz "${target}" existierte nicht und wurde erstellt.`;
+	new Notice(t("{name} created a note: {path}", { name: VARIANT.name, path: target }));
+	return `Note "${target}" did not exist and was created.`;
 }
 
 async function editNote(
@@ -586,14 +588,14 @@ async function editNote(
 
 	if (file instanceof TFile) {
 		await app.vault.modify(file, content ?? "");
-		new Notice(`Euridian hat Notiz überschrieben: ${target}`);
-		return `Inhalt von "${target}" wurde ersetzt.`;
+		new Notice(t("{name} overwrote a note: {path}", { name: VARIANT.name, path: target }));
+		return `Content of "${target}" was replaced.`;
 	}
 	if (file instanceof TFolder) {
-		return `Fehler: "${target}" ist ein Ordner.`;
+		return `Error: "${target}" is a folder.`;
 	}
 	await ensureParentFolder(app, target);
 	await app.vault.create(target, content ?? "");
-	new Notice(`Euridian hat Notiz erstellt: ${target}`);
-	return `Notiz "${target}" existierte nicht und wurde erstellt.`;
+	new Notice(t("{name} created a note: {path}", { name: VARIANT.name, path: target }));
+	return `Note "${target}" did not exist and was created.`;
 }

@@ -11,6 +11,7 @@
  */
 
 import { requestUrl } from "obsidian";
+import { t } from "./i18n";
 import { EuridianError, ToolCall, ToolDefinition, WebSearchProvider } from "./types";
 
 /** Was die Suche zum Ausführen braucht. */
@@ -35,15 +36,14 @@ export function getWebToolDefinitions(): ToolDefinition[] {
 			function: {
 				name: "search_web",
 				description:
-					"Durchsucht das Internet und gibt Titel, URL und " +
-					"kurze Beschreibung der Top-Treffer zurück. Nutze dies für aktuelle " +
-					"Informationen, die nicht im Vault stehen.",
+					"Searches the web and returns title, URL and a short description of " +
+					"the top results. Use it for current information that is not in the vault.",
 				parameters: {
 					type: "object",
 					properties: {
 						query: {
 							type: "string",
-							description: "Suchbegriff.",
+							description: "Search query.",
 						},
 					},
 					required: ["query"],
@@ -71,7 +71,7 @@ export async function executeWebToolCall(
 	try {
 		args = JSON.parse(call.function.arguments || "{}") as Record<string, string>;
 	} catch {
-		return "Fehler: Argumente waren kein gültiges JSON.";
+		return "Error: the arguments were not valid JSON.";
 	}
 
 	try {
@@ -79,10 +79,10 @@ export async function executeWebToolCall(
 			case "search_web":
 				return await searchWeb(cfg, args.query);
 			default:
-				return `Fehler: Unbekanntes Werkzeug "${call.function.name}".`;
+				return `Error: unknown tool "${call.function.name}".`;
 		}
 	} catch (err) {
-		return `Fehler bei ${call.function.name}: ${
+		return `Error in ${call.function.name}: ${
 			err instanceof Error ? err.message : String(err)
 		}`;
 	}
@@ -106,7 +106,7 @@ const DDG_HTML_URL = "https://html.duckduckgo.com/html/";
 
 /** Formatiert Treffer als nummerierte Liste (Titel, URL, Beschreibung). */
 function formatResults(results: { title: string; url: string; description: string }[]): string {
-	if (results.length === 0) return "Keine Suchergebnisse gefunden.";
+	if (results.length === 0) return "No search results found.";
 	return results
 		.slice(0, MAX_RESULTS)
 		.map((r, i) => `${i + 1}. ${r.title || "(ohne Titel)"}\n   ${r.url}\n   ${r.description}`)
@@ -130,7 +130,7 @@ async function searchDuckDuckGo(query: string): Promise<string> {
 	} catch {
 		throw new EuridianError(
 			"offline",
-			"DuckDuckGo nicht erreichbar — Internetverbindung prüfen."
+			t("DuckDuckGo is not reachable. Check your internet connection.")
 		);
 	}
 
@@ -160,7 +160,7 @@ async function searchDuckDuckGo(query: string): Promise<string> {
 		if (res.status === 202 || res.status === 429 || res.text?.includes("anomaly")) {
 			throw new EuridianError(
 				"rate_limit",
-				"DuckDuckGo blockiert die Anfrage (Bot-Abfrage). Später erneut versuchen oder in den Einstellungen Brave Search nutzen.",
+				t("DuckDuckGo is blocking the request (bot check). Try again later or switch to Brave Search in the settings."),
 				res.status
 			);
 		}
@@ -175,7 +175,7 @@ async function searchBrave(apiKey: string, query: string): Promise<string> {
 	if (!apiKey) {
 		throw new EuridianError(
 			"auth",
-			"Kein Brave-Search-API-Key hinterlegt (Einstellungen → Websuche)."
+			t("No Brave Search API key set (settings, web search).")
 		);
 	}
 	let res;
@@ -189,21 +189,21 @@ async function searchBrave(apiKey: string, query: string): Promise<string> {
 	} catch {
 		throw new EuridianError(
 			"offline",
-			"Brave Search nicht erreichbar — Internetverbindung prüfen."
+			t("Brave Search is not reachable. Check your internet connection.")
 		);
 	}
 
 	if (res.status === 401 || res.status === 403) {
 		throw new EuridianError(
 			"auth",
-			"Brave Search: API-Key ungültig — in den Einstellungen prüfen.",
+			t("Brave Search: invalid API key. Check it in the settings."),
 			res.status
 		);
 	}
 	if (res.status === 429) {
 		throw new EuridianError(
 			"rate_limit",
-			"Brave Search: Rate-Limit erreicht — bitte kurz warten.",
+			t("Brave Search: rate limit reached. Please wait a moment."),
 			res.status
 		);
 	}
@@ -216,7 +216,7 @@ async function searchBrave(apiKey: string, query: string): Promise<string> {
 			| { web?: { results?: { title?: string; url?: string; description?: string }[] } }
 			| undefined
 	)?.web?.results;
-	if (!Array.isArray(results)) return "Keine Suchergebnisse gefunden.";
+	if (!Array.isArray(results)) return "No search results found.";
 	return formatResults(
 		results.map((r) => ({
 			title: r.title ?? "",

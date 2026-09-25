@@ -8,6 +8,7 @@
 import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { ChatView, VIEW_TYPE } from "./chat-view";
 import { migrateData, VARIANT } from "../variant";
+import { t } from "./i18n";
 import { InlineEditModal } from "./inline-edit";
 import { DEFAULT_SETTINGS, EuridianSettingTab } from "./settings";
 import { PluginSettings, SessionsState } from "./types";
@@ -30,39 +31,39 @@ export default class EuridianPlugin extends Plugin {
 		);
 
 		// Ribbon-Icon (BMP-sicheres Lucide-Icon, kein Farb-Emoji).
-		this.addRibbonIcon("message-circle", `${VARIANT.name}: Chat öffnen`, () => {
+		this.addRibbonIcon("message-circle", t("{name}: open chat", { name: VARIANT.name }), () => {
 			void this.activateView();
 		});
 
 		// Command zum Öffnen der Chat-View.
 		this.addCommand({
 			id: "open-chat",
-			name: "Chat öffnen",
+			name: t("Open chat"),
 			callback: () => this.activateView(),
 		});
 
 		// Command: markierten Text als Kontext an den Chat anhängen.
 		this.addCommand({
 			id: "attach-selection",
-			name: "Auswahl als Kontext anhängen",
+			name: t("Attach selection as context"),
 			editorCallback: (editor, ctx) => {
 				const sel = editor.getSelection();
 				if (!sel.trim()) {
-					new Notice("Kein Text markiert.");
+					new Notice(t("No text selected."));
 					return;
 				}
-				void this.addSelectionToChat(sel, ctx.file?.path ?? "Notiz");
+				void this.addSelectionToChat(sel, ctx.file?.path ?? t("Note"));
 			},
 		});
 
 		// Command: markierten Text per KI bearbeiten (mit Diff-Vorschau).
 		this.addCommand({
 			id: "inline-edit",
-			name: "Inline-Edit: Auswahl mit KI bearbeiten",
+			name: t("Edit selection with AI (inline edit)"),
 			editorCallback: (editor) => {
 				const sel = editor.getSelection();
 				if (!sel.trim()) {
-					new Notice("Bitte zuerst Text markieren.");
+					new Notice(t("Select some text first."));
 					return;
 				}
 				new InlineEditModal(this.app, this, editor, sel).open();
@@ -76,15 +77,15 @@ export default class EuridianPlugin extends Plugin {
 				if (!sel.trim()) return;
 				menu.addItem((item) =>
 					item
-						.setTitle(`Zu ${VARIANT.name}-Chat hinzufügen`)
+						.setTitle(t("Add to {name} chat", { name: VARIANT.name }))
 						.setIcon("highlighter")
 						.onClick(() =>
-							void this.addSelectionToChat(sel, ctx.file?.path ?? "Notiz")
+							void this.addSelectionToChat(sel, ctx.file?.path ?? t("Note"))
 						)
 				);
 				menu.addItem((item) =>
 					item
-						.setTitle(`Mit ${VARIANT.name} bearbeiten (Inline-Edit)`)
+						.setTitle(t("Edit with {name} (inline edit)", { name: VARIANT.name }))
 						.setIcon("wand")
 						.onClick(() =>
 							new InlineEditModal(this.app, this, editor, sel).open()

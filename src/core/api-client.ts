@@ -23,6 +23,7 @@
 import * as http from "http";
 import * as https from "https";
 import { requestUrl } from "obsidian";
+import { t } from "./i18n";
 import {
 	ApiMessage,
 	EuridianError,
@@ -171,7 +172,7 @@ export class EuridianApiClient {
 				url = new URL(endpoint.chatUrl);
 			} catch {
 				reject(
-					new EuridianError("bad_request", `Ungültige URL: ${endpoint.chatUrl}`)
+					new EuridianError("bad_request", t("Invalid URL: {url}", { url: endpoint.chatUrl }))
 				);
 				return;
 			}
@@ -260,7 +261,7 @@ export class EuridianApiClient {
 						reject(
 							new EuridianError(
 								"unknown",
-								`Stream-Fehler: ${(err as Error)?.message ?? "unbekannt"}`
+								t("Stream error: {message}", { message: (err as Error)?.message ?? t("unknown") })
 							)
 						);
 					});
@@ -272,33 +273,33 @@ export class EuridianApiClient {
 				(err: Error & { euridianIdleTimeout?: true; euridianQueueTimeout?: boolean }) => {
 				clearIdleTimer();
 				if (callbacks.signal?.aborted) {
-					reject(new EuridianError("aborted", "Anfrage abgebrochen."));
+					reject(new EuridianError("aborted", t("Request cancelled.")));
 				} else if (err.euridianQueueTimeout) {
 					reject(
 						new EuridianError(
 							"offline",
-							`${endpoint.label}: Keine Antwort seit ${STREAM_QUEUE_TIMEOUT_MS / 60_000} Minuten — ` +
-								"der Server hat noch nicht einmal mit der Antwort begonnen. " +
-								"Möglicherweise steckt die Anfrage in einer serverseitigen " +
-								"Warteschlange (begrenzte parallele Anfragen). Prüfe ggf. beim " +
-								"Server-Betreiber, oder versuch es erneut."
+							t(
+								"{label}: no response for {minutes} minutes. The server has not even started answering. The request may be stuck in a server-side queue (limited parallel requests). Ask the server operator, or try again.",
+								{ label: endpoint.label, minutes: STREAM_QUEUE_TIMEOUT_MS / 60_000 }
+							)
 						)
 					);
 				} else if (err.euridianIdleTimeout) {
 					reject(
 						new EuridianError(
 							"offline",
-							`${endpoint.label}: Keine weiteren Daten seit ${STREAM_IDLE_TIMEOUT_MS / 1000}s — ` +
-								"Verbindung hängt mitten im Stream (Server/Proxy antwortet nicht " +
-								"mehr, ohne die Verbindung zu schließen). Prüfe Netzwerk/VPN " +
-								"oder versuch es erneut."
+							t(
+								"{label}: no more data for {seconds} s. The connection hangs mid-stream (server or proxy stopped answering without closing the connection). Check network/VPN or try again.",
+								{ label: endpoint.label, seconds: STREAM_IDLE_TIMEOUT_MS / 1000 }
+							)
 						)
 					);
 				} else {
 					reject(
 						new EuridianError(
 							"offline",
-							`${endpoint.label} ist nicht erreichbar. ` +
+							t("{label} is not reachable.", { label: endpoint.label }) +
+								" " +
 								this.offlineHint(endpoint) +
 								` (${err.message})`
 						)
@@ -346,7 +347,7 @@ export class EuridianApiClient {
 		} catch {
 			throw new EuridianError(
 				"offline",
-				`${endpoint.label} ist nicht erreichbar. ${this.offlineHint(endpoint)}`
+				`${t("{label} is not reachable.", { label: endpoint.label })} ${this.offlineHint(endpoint)}`
 			);
 		}
 
@@ -472,7 +473,7 @@ export class EuridianApiClient {
 		} catch {
 			throw new EuridianError(
 				"offline",
-				`${endpoint.label} ist nicht erreichbar. ${this.offlineHint(endpoint)}`
+				`${t("{label} is not reachable.", { label: endpoint.label })} ${this.offlineHint(endpoint)}`
 			);
 		}
 
@@ -507,13 +508,13 @@ export class EuridianApiClient {
 		} catch {
 			throw new EuridianError(
 				"offline",
-				"Ollama ist nicht erreichbar. Läuft der Server? (`ollama serve`)"
+				t("Ollama is not reachable. Is the server running? (`ollama serve`)")
 			);
 		}
 		if (res.status >= 400) {
 			throw new EuridianError(
 				"bad_request",
-				`Ollama: Modell „${model}“ konnte nicht geladen werden (HTTP ${res.status}).`
+				t("Ollama: could not load model \"{model}\" (HTTP {status}).", { model, status: res.status })
 			);
 		}
 	}
@@ -539,26 +540,29 @@ export class EuridianApiClient {
 			case "auth":
 				return new EuridianError(
 					"auth",
-					`${endpoint.label}: Authentifizierung fehlgeschlagen — API-Key / Product-ID prüfen.`,
+					t("{label}: authentication failed. Check the API key / product ID.", { label: endpoint.label }),
 					status
 				);
 			case "not_found":
 				return new EuridianError(
 					"not_found",
-					`${endpoint.label}: Modell "${endpoint.model}" oder Endpunkt nicht gefunden.`,
+					t("{label}: model \"{model}\" or endpoint not found.", { label: endpoint.label, model: endpoint.model }),
 					status
 				);
 			case "rate_limit":
 				return new EuridianError(
 					"rate_limit",
-					`${endpoint.label}: Rate-Limit erreicht — bitte kurz warten.`,
+					t("{label}: rate limit reached. Please wait a moment.", { label: endpoint.label }),
 					status
 				);
 			case "bad_request":
 				return new EuridianError(
 					"bad_request",
-					`${endpoint.label}: Ungültige Anfrage. ` +
-						`Evtl. unterstützt "${endpoint.model}" einen Parameter nicht. ` +
+					t("{label}: invalid request. \"{model}\" may not support a parameter.", {
+						label: endpoint.label,
+						model: endpoint.model,
+					}) +
+						" " +
 						this.shortDetail(detail),
 					status
 				);
@@ -578,7 +582,7 @@ export class EuridianApiClient {
 	}
 
 	private offlineHint(endpoint: ResolvedEndpoint): string {
-		return endpoint.offlineHint ?? "Internetverbindung prüfen.";
+		return endpoint.offlineHint ?? t("Check your internet connection.");
 	}
 }
 

@@ -8,52 +8,14 @@ import { providerFor } from "./backend";
 import { DEFAULT_BACKEND, PROVIDERS, VARIANT } from "../variant";
 import { PROVIDER_DEFAULTS } from "../variant/settings";
 import { isWebSearchReady, searchWeb } from "./web-tools";
+import { currentLanguage, t } from "./i18n";
+import { TEMPLATES_DE, TEMPLATES_EN } from "./locales/templates";
 import { EuridianError, PluginSettings, PromptTemplate } from "./types";
 import type EuridianPlugin from "./main";
 
-/** Mitgelieferte Prompt-Vorlagen (Slash-Commands). Nutzer kann sie anpassen. */
-export const DEFAULT_TEMPLATES: PromptTemplate[] = [
-	{
-		name: "zusammenfassen",
-		description: "Aktuelle Notiz prägnant zusammenfassen",
-		template:
-			"Fasse die folgende Notiz prägnant in Stichpunkten zusammen:\n\n{{note}}",
-	},
-	{
-		name: "übersetzen",
-		description: "Text ins Englische übersetzen",
-		template: "Übersetze den folgenden Text ins Englische:\n\n{{input}}",
-	},
-	{
-		name: "verbessern",
-		description: "Markierten Text stilistisch verbessern (natürliches Deutsch, keine KI-Muster)",
-		template:
-			"Verbessere Stil und Grammatik des folgenden Textes, ohne den Sinn zu verändern.\n" +
-			"Vermeide dabei typische KI-Textmuster:\n" +
-			"- Gedankenstriche sparsam einsetzen, nicht anstelle von Komma/Doppelpunkt häufen\n" +
-			'- Keine Werbe-/Feiersprache ("spielt eine bedeutende Rolle", "unterstreicht die Bedeutung")\n' +
-			'- Keine mechanischen Satzanfänge ("Darüber hinaus", "Zusätzlich", "Außerdem") in Folge\n' +
-			'- Kein "nicht nur..., sondern auch..." als Standardfigur\n' +
-			"- Schlichte Verben statt steifer Synonyme (schrieb statt verfasste, half statt leistete Unterstützung)\n" +
-			"- Keine erzwungene Synonym-Rotation — Wortwiederholung ist erlaubt\n" +
-			'- Fettdruck und Listen sparsam; kein Schema "**Begriff:** Erklärung"\n' +
-			'- Kein "Fazit"- oder "Herausforderungen/Ausblick"-Block am Ende\n' +
-			'- Keine Dialog-/Meta-Reste ("Hier ist der Text", "Ich hoffe das hilft")\n\n' +
-			"Text:\n{{selection}}",
-	},
-	{
-		name: "erklären",
-		description: "Markierten Text einfach erklären",
-		template:
-			"Erkläre den folgenden Text einfach und verständlich:\n\n{{selection}}",
-	},
-	{
-		name: "fortsetzen",
-		description: "Notiz im gleichen Stil weiterschreiben",
-		template:
-			"Schreibe die folgende Notiz im gleichen Stil sinnvoll weiter:\n\n{{note}}",
-	},
-];
+/** Mitgelieferte Prompt-Vorlagen in der Sprache der Oberfläche. */
+export const DEFAULT_TEMPLATES: PromptTemplate[] =
+	currentLanguage() === "de" ? TEMPLATES_DE : TEMPLATES_EN;
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	...PROVIDER_DEFAULTS,
@@ -100,7 +62,7 @@ export class EuridianSettingTab extends PluginSettingTab {
 		if (PROVIDERS.length > 1) {
 			new Setting(containerEl)
 				.setName("Backend")
-				.setDesc("Welcher Dienst die Antworten liefert.")
+				.setDesc(t("Which service provides the answers."))
 				.addDropdown((dd) => {
 					for (const p of PROVIDERS) dd.addOption(p.id, p.label);
 					return dd
@@ -117,30 +79,31 @@ export class EuridianSettingTab extends PluginSettingTab {
 		providerFor(s.backend).renderSettings(this);
 
 		// --- Gemeinsame Verhaltens-Einstellungen ---
-		new Setting(containerEl).setName("Verhalten").setHeading();
+		new Setting(containerEl).setName(t("Behavior")).setHeading();
 
 		new Setting(containerEl)
-			.setName("Vault-Agent")
+			.setName(t("Vault agent"))
 			.setDesc(
-				"Erlaubt dem Modell, Notizen zu lesen, zu durchsuchen, zu erstellen und zu ändern " +
-					"(Function Calling). Löschen ist gesperrt. Modell muss Tool-Calling unterstützen."
+				t(
+					"Lets the model read, search, create and edit notes (function calling). Deleting is blocked. The model must support tool calling."
+				)
 			)
-			.addToggle((t) =>
-				t.setValue(s.enableVaultAgent).onChange(async (v) => {
+			.addToggle((tg) =>
+				tg.setValue(s.enableVaultAgent).onChange(async (v) => {
 					s.enableVaultAgent = v;
 					await this.plugin.saveSettings();
 				})
 			);
 
 		new Setting(containerEl)
-			.setName("Bestätigung vor Schreibaktionen")
+			.setName(t("Confirm before writing"))
 			.setDesc(
-				"Fragt vor dem Erstellen, Anhängen oder Überschreiben von Notizen nach " +
-					"(mit Vorschau). Lesen und Suchen bleiben ohne Rückfrage. Empfohlen, " +
-					"verhindert ungefragte/halluzinierte Notizen."
+				t(
+					"Asks before creating, appending to or overwriting notes, with a preview. Reading and searching never ask. Recommended: prevents unrequested or hallucinated notes."
+				)
 			)
-			.addToggle((t) =>
-				t.setValue(s.confirmBeforeWrite).onChange(async (v) => {
+			.addToggle((tg) =>
+				tg.setValue(s.confirmBeforeWrite).onChange(async (v) => {
 					s.confirmBeforeWrite = v;
 					await this.plugin.saveSettings();
 				})
@@ -150,10 +113,11 @@ export class EuridianSettingTab extends PluginSettingTab {
 
 		// --- Umschalter einfach / erweitert ---
 		new Setting(containerEl)
-			.setName("Erweiterte Einstellungen")
+			.setName(t("Advanced settings"))
 			.setDesc(
-				"Zeigt weitere Optionen (Kontext, System-Prompt, Temperatur, Vorlagen, …). " +
-					"Die Standardwerte passen für die meisten."
+				t(
+					"Shows more options (context, system prompt, temperature, templates, …). The defaults suit most people."
+				)
 			)
 			.addToggle((tg) =>
 				tg.setValue(s.showAdvancedSettings).onChange(async (v) => {
@@ -165,44 +129,42 @@ export class EuridianSettingTab extends PluginSettingTab {
 
 		if (!s.showAdvancedSettings) return;
 
-		new Setting(containerEl).setName("Erweitert").setHeading();
+		new Setting(containerEl).setName(t("Advanced")).setHeading();
 		providerFor(s.backend).renderAdvancedSettings?.(this);
 
 		new Setting(containerEl)
-			.setName("Aktuelle Notiz als Kontext")
-			.setDesc(
-				"Sendet den Inhalt der gerade geöffneten Notiz als System-Kontext mit."
-			)
-			.addToggle((t) =>
-				t.setValue(s.includeCurrentNote).onChange(async (v) => {
+			.setName(t("Current note as context"))
+			.setDesc(t("Sends the content of the open note along as system context."))
+			.addToggle((tg) =>
+				tg.setValue(s.includeCurrentNote).onChange(async (v) => {
 					s.includeCurrentNote = v;
 					await this.plugin.saveSettings();
 				})
 			);
 
 		new Setting(containerEl)
-			.setName(`${VARIANT.name}-Instruktionsdatei`)
+			.setName(t("{name} instructions file", { name: VARIANT.name }))
 			.setDesc(
-				"Vault-Pfad zu einer kurzen Instruktionsdatei für " + VARIANT.name + " " +
-					"(z. B. Vault-Konventionen, Ordnerstruktur). Leer lassen = keine. " +
-					"Standard: Euria.md im Vault-Root. NICHT die vault-weite CLAUDE.md " +
-					"eintragen — große CLAUDE.md für andere Assistenten derailen den Agenten."
+				t(
+					"Vault path to a short instructions file for {name} (for example vault conventions or folder structure). Leave empty for none. Default: {path} in the vault root. Do not enter your vault-wide CLAUDE.md: large instruction files written for other assistants derail the agent.",
+					{ name: VARIANT.name, path: VARIANT.defaultInstructionsPath }
+				)
 			)
-			.addText((t) => {
-				t.setPlaceholder("Euria.md")
+			.addText((tg) => {
+				tg.setPlaceholder(VARIANT.defaultInstructionsPath)
 					.setValue(s.euridianInstructionsPath)
 					.onChange(async (v) => {
 						s.euridianInstructionsPath = v.trim();
 						await this.plugin.saveSettings();
 					});
-				t.inputEl.autocomplete = "off";
+				tg.inputEl.autocomplete = "off";
 			});
 
 		new Setting(containerEl)
-			.setName("System-Prompt")
-			.setDesc("Optionale Persona / Stilvorgabe für die KI.")
+			.setName(t("System prompt"))
+			.setDesc(t("Optional persona or style instructions for the AI."))
 			.addTextArea((ta) => {
-				ta.setPlaceholder("Du bist ein hilfreicher Assistent …")
+				ta.setPlaceholder(t("You are a helpful assistant …"))
 					.setValue(s.systemPrompt)
 					.onChange(async (v) => {
 						s.systemPrompt = v;
@@ -214,13 +176,14 @@ export class EuridianSettingTab extends PluginSettingTab {
 
 		if (PROVIDERS.some((p) => p.usesSharedThinking)) {
 			new Setting(containerEl)
-				.setName("Thinking / Reasoning")
+				.setName(t("Thinking / reasoning"))
 				.setDesc(
-					'Aktiviert das "Nachdenken" des Modells. Aus → schneller & ' +
-						"günstiger (reasoning_effort: none)."
+					t(
+						"Turns on the model's \"thinking\". Off is faster and cheaper (reasoning_effort: none)."
+					)
 				)
-				.addToggle((t) =>
-					t.setValue(s.enableThinking).onChange(async (v) => {
+				.addToggle((tg) =>
+					tg.setValue(s.enableThinking).onChange(async (v) => {
 						s.enableThinking = v;
 						await this.plugin.saveSettings();
 					})
@@ -228,8 +191,8 @@ export class EuridianSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(containerEl)
-			.setName("Temperatur")
-			.setDesc("0 = deterministisch, 2 = sehr kreativ.")
+			.setName(t("Temperature"))
+			.setDesc(t("0 = deterministic, 2 = very creative."))
 			.addSlider((sl) =>
 				sl
 					.setLimits(0, 2, 0.1)
@@ -241,9 +204,11 @@ export class EuridianSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Max. Kontext-Nachrichten")
+			.setName(t("Max. context messages"))
 			.setDesc(
-				"Älteste Nachrichten werden über dieser Grenze aus dem vollständigen Kontext entfernt (Token-Sparen)."
+				t(
+					"Oldest messages beyond this limit are dropped from the full context (saves tokens)."
+				)
 			)
 			.addSlider((sl) =>
 				sl
@@ -256,14 +221,14 @@ export class EuridianSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Verlauf automatisch komprimieren")
+			.setName(t("Compress history automatically"))
 			.setDesc(
-				"Statt entfernte Nachrichten komplett zu verwerfen, per LLM-Kurzfassung " +
-					"erhalten (ein zusätzlicher Hintergrund-Request, sobald die Grenze " +
-					"erstmals überschritten wird). Analog zu Claude Codes Auto-Compact."
+				t(
+					"Instead of discarding dropped messages entirely, keep them as an LLM summary (one extra background request the first time the limit is exceeded). Works like auto-compact in Claude Code."
+				)
 			)
-			.addToggle((t) =>
-				t.setValue(s.autoCompactHistory).onChange(async (v) => {
+			.addToggle((tg) =>
+				tg.setValue(s.autoCompactHistory).onChange(async (v) => {
 					s.autoCompactHistory = v;
 					await this.plugin.saveSettings();
 				})
@@ -278,14 +243,14 @@ export class EuridianSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		const s = this.plugin.settings;
 
-		new Setting(containerEl).setName("Websuche (optional)").setHeading();
+		new Setting(containerEl).setName(t("Web search (optional)")).setHeading();
 
 		new Setting(containerEl)
-			.setName("Websuche aktivieren")
+			.setName(t("Enable web search"))
 			.setDesc(
-				'Fügt dem Agenten das Werkzeug "search_web" hinzu. ' +
-					"Die Suche läuft immer lokal über deinen Rechner, auch wenn dein " +
-					"Server selbst keinen Internetzugang hat."
+				t(
+					'Gives the agent the "search_web" tool. The search always runs locally on your computer, even if your server has no internet access itself.'
+				)
 			)
 			.addToggle((tg) =>
 				tg.setValue(s.enableWebSearch).onChange(async (v) => {
@@ -298,16 +263,16 @@ export class EuridianSettingTab extends PluginSettingTab {
 		if (!s.enableWebSearch) return;
 
 		new Setting(containerEl)
-			.setName("Suchanbieter")
+			.setName(t("Search provider"))
 			.setDesc(
-				"DuckDuckGo braucht keinen Account, ist aber inoffiziell und kann bei " +
-					"vielen Anfragen blockiert werden. Brave Search ist stabiler, braucht " +
-					"aber einen kostenlosen API-Key."
+				t(
+					"DuckDuckGo needs no account but is unofficial and can be blocked after many requests. Brave Search is more stable but needs a free API key."
+				)
 			)
 			.addDropdown((dd) =>
 				dd
-					.addOption("duckduckgo", "DuckDuckGo (ohne Account)")
-					.addOption("brave", "Brave Search (API-Key)")
+					.addOption("duckduckgo", t("DuckDuckGo (no account)"))
+					.addOption("brave", t("Brave Search (API key)"))
 					.setValue(s.webSearchProvider)
 					.onChange(async (v) => {
 						s.webSearchProvider = v as PluginSettings["webSearchProvider"];
@@ -318,46 +283,49 @@ export class EuridianSettingTab extends PluginSettingTab {
 
 		if (s.webSearchProvider === "brave") {
 			new Setting(containerEl)
-				.setName("Brave Search API-Key")
+				.setName(t("Brave Search API key"))
 				.setDesc(
-					"Kostenloser Key unter brave.com/search/api (Free-Tier: 2000 Anfragen/Monat)."
+					t("Free key at brave.com/search/api (free tier: 2000 requests per month).")
 				)
-				.addText((t) => {
-					t.setPlaceholder("BSA...")
+				.addText((tg) => {
+					tg.setPlaceholder("BSA...")
 						.setValue(s.braveApiKey)
 						.onChange(async (v) => {
 							s.braveApiKey = v.trim();
 							await this.plugin.saveSettings();
 						});
-					t.inputEl.type = "password";
+					tg.inputEl.type = "password";
 				});
 		}
 
 		new Setting(containerEl)
-			.setName("Verbindung testen")
-			.setDesc("Führt eine Testsuche aus.")
+			.setName(t("Test connection"))
+			.setDesc(t("Runs a test search."))
 			.addButton((btn) =>
 				btn
-					.setButtonText("Testen")
+					.setButtonText(t("Test"))
 					.onClick(async () => {
 						if (!isWebSearchReady(s)) {
-							new Notice("Erst den API-Key eintragen.");
+							new Notice(t("Enter the API key first."));
 							return;
 						}
-						btn.setDisabled(true).setButtonText("Teste …");
+						btn.setDisabled(true).setButtonText(t("Testing …"));
 						try {
 							await searchWeb(s, "test");
 							new Notice(
-								`✓ ${s.webSearchProvider === "brave" ? "Brave Search" : "DuckDuckGo"} erreichbar.`
+								t("✓ {provider} reachable.", {
+									provider:
+										s.webSearchProvider === "brave" ? "Brave Search" : "DuckDuckGo",
+								})
 							);
 						} catch (err) {
 							const msg =
 								err instanceof EuridianError
 									? err.message
-									: `Unbekannter Fehler: ${String(err)}`;
+									: t("Unknown error: {error}", { error: String(err) });
 							new Notice(`✕ ${msg}`, 8000);
 						} finally {
-							btn.setDisabled(false).setButtonText("Testen");
+							btn.setDisabled(false).setButtonText(t("Test"));
 						}
 					})
 			);
@@ -368,13 +336,12 @@ export class EuridianSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		const s = this.plugin.settings;
 
-		new Setting(containerEl).setName("Prompt-Vorlagen (Slash-Commands)").setHeading();
+		new Setting(containerEl).setName(t("Prompt templates (slash commands)")).setHeading();
 		containerEl.createEl("p", {
 			cls: "setting-item-description",
-			text:
-				"Tippe / im Chat, um eine Vorlage einzufügen. Platzhalter: " +
-				"{{input}} (Cursor für deinen Text), {{selection}} (markierter Text), " +
-				"{{note}} (ganze Notiz), {{title}} (Notiztitel).",
+			text: t(
+				"Type / in the chat to insert a template. Placeholders: {{input}} (cursor for your text), {{selection}} (selected text), {{note}} (whole note), {{title}} (note title)."
+			),
 		});
 
 		s.promptTemplates.forEach((tpl, i) => {
@@ -384,7 +351,7 @@ export class EuridianSettingTab extends PluginSettingTab {
 				.addExtraButton((b) =>
 					b
 						.setIcon("trash")
-						.setTooltip("Entfernen")
+						.setTooltip(t("Remove"))
 						.onClick(async () => {
 							// Nicht-mutierend, um die geteilte Default-Liste nicht zu verändern.
 							s.promptTemplates = s.promptTemplates.filter(
@@ -400,22 +367,22 @@ export class EuridianSettingTab extends PluginSettingTab {
 		const draft: PromptTemplate = { name: "", description: "", template: "" };
 
 		new Setting(containerEl)
-			.setName("Neue Vorlage")
-			.setDesc("Name (ohne Leerzeichen) und Kurzbeschreibung.")
-			.addText((t) =>
-				t.setPlaceholder("name").onChange((v) => (draft.name = v.trim()))
+			.setName(t("New template"))
+			.setDesc(t("Name (no spaces) and short description."))
+			.addText((tg) =>
+				tg.setPlaceholder(t("Name")).onChange((v) => (draft.name = v.trim()))
 			)
-			.addText((t) =>
-				t
-					.setPlaceholder("Beschreibung")
+			.addText((tg) =>
+				tg
+					.setPlaceholder(t("Description"))
 					.onChange((v) => (draft.description = v.trim()))
 			);
 
 		new Setting(containerEl)
-			.setName("Prompt-Text")
-			.setDesc("Mit Platzhaltern, z. B. „Übersetze: {{input}}“.")
+			.setName(t("Prompt text"))
+			.setDesc(t('With placeholders, for example "Translate: {{input}}".'))
 			.addTextArea((ta) => {
-				ta.setPlaceholder("Übersetze ins Englische:\n\n{{input}}").onChange(
+				ta.setPlaceholder(t("Translate into English:\n\n{{input}}")).onChange(
 					(v) => (draft.template = v)
 				);
 				ta.inputEl.rows = 3;
@@ -423,11 +390,11 @@ export class EuridianSettingTab extends PluginSettingTab {
 			})
 			.addButton((b) =>
 				b
-					.setButtonText("Hinzufügen")
+					.setButtonText(t("Add"))
 					.setCta()
 					.onClick(async () => {
 						if (!draft.name || !draft.template.trim()) {
-							new Notice("Name und Prompt-Text sind nötig.");
+							new Notice(t("Name and prompt text are required."));
 							return;
 						}
 						const entry: PromptTemplate = {

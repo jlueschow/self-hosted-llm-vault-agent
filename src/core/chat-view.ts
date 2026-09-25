@@ -19,6 +19,7 @@ import {
 } from "obsidian";
 import { EuridianApiClient } from "./api-client";
 import { VARIANT } from "../variant";
+import { currentLanguage, t } from "./i18n";
 import {
 	currentModelRef,
 	effectiveThinking,
@@ -134,7 +135,7 @@ type PendingAttachment =
 class FileSuggestModal extends FuzzySuggestModal<TFile> {
 	constructor(app: App, private onChoose: (file: TFile) => void) {
 		super(app);
-		this.setPlaceholder("Datei suchen und anhängen…");
+		this.setPlaceholder(t("Search for a file to attach …"));
 	}
 	getItems(): TFile[] {
 		return this.app.vault
@@ -171,57 +172,59 @@ function buildAgentSystemPrompt(useVault: boolean, useWeb: boolean): string {
 
 	if (useVault) {
 		intro.push(
-			"Du hast über Werkzeuge echten Zugriff auf den Vault des Nutzers: Markdown-Notizen " +
-				"lesen, durchsuchen, auflisten, erstellen, ergänzen und ändern. " +
-				"Zusätzlich kannst du über list_documents und read_document den Textinhalt von " +
-				"PDF-, Word- (.docx) und PowerPoint- (.pptx) Dateien im Vault auslesen — diese " +
-				"tauchen nicht bei list_notes/search_vault auf, sondern nur bei list_documents. " +
-				"Nutze diese Werkzeuge proaktiv und selbstständig, statt zu behaupten, du hättest keinen Zugriff. " +
-				"Alle Pfade sind relativ zum Vault-Root. Wenn du einen Pfad nicht kennst, nutze search_vault oder list_notes."
+			"Through tools you have real access to the user's vault: you can read, search, list, create, append to and edit Markdown notes. " +
+				"In addition, list_documents and read_document let you read the text content of PDF, Word (.docx) and PowerPoint (.pptx) files in the vault; " +
+				"these do not show up in list_notes/search_vault, only in list_documents. " +
+				"Use these tools proactively and on your own instead of claiming you have no access. " +
+				"All paths are relative to the vault root. If you do not know a path, use search_vault or list_notes."
 		);
 	}
 
 	if (useWeb) {
 		intro.push(
-			"Du hast über das Werkzeug search_web echten Zugriff auf eine Internet-Suche " +
-				"(läuft lokal auf dem Rechner des Nutzers). Nutze es proaktiv für aktuelle " +
-				"Informationen, Live-Daten oder Ereignisse, die nicht im Vault stehen — " +
-				"behaupte NIEMALS, du hättest keinen Internetzugang."
+			"Through the search_web tool you have real access to a web search " +
+				"(it runs locally on the user's computer). Use it proactively for current " +
+				"information, live data or events that are not in the vault. " +
+				"NEVER claim you have no internet access."
 		);
 	} else {
 		intro.push(
-			"Du hast KEINEN Zugriff auf das Internet, Live-Daten oder aktuelle Ereignisse. " +
-				"Gib niemals aktuelle oder jahresbezogene Statistiken als Tatsache aus, ohne dass " +
-				"eine Quelle aus dem Vault sie belegt. Mache Annahmen und dein Trainings-Wissensende klar kenntlich."
+			"You have NO access to the internet, live data or current events. " +
+				"Never state current or year-specific statistics as fact unless " +
+				"a source in the vault supports them. Make assumptions and your training cutoff clear."
 		);
 	}
 
-	intro.push("Antworte standardmäßig auf Deutsch.");
+	intro.push(
+		currentLanguage() === "de"
+			? "Antworte in der Sprache des Nutzers, standardmäßig auf Deutsch."
+			: "Reply in the language the user writes in, by default English."
+	);
 
 	// Absatz 2: Regelliste, durch Leerzeile vom Intro getrennt.
 	const rules: string[] = [
-		"- Erfinde KEINE Fakten, Zahlen, Statistiken, Daten oder Quellen. Wenn du etwas " +
-			`nicht sicher weißt und es weder im Vault${useWeb ? " noch in einem Suchergebnis" : ""} steht, sage das offen, statt zu raten.`,
+		"- Do NOT invent facts, numbers, statistics, data or sources. If you are not sure about something " +
+			`and it is neither in the vault${useWeb ? " nor in a search result" : ""}, say so openly instead of guessing.`,
 	];
 	if (useVault) {
 		rules.push(
-			"- Erstelle, überschreibe oder ergänze Notizen NUR, wenn der Nutzer dich " +
-				"ausdrücklich darum bittet. Speichere Analysen oder Zusammenfassungen nicht unaufgefordert.",
-			"- Zum Ergänzen/Erweitern einer Notiz nutze IMMER append_to_note (nicht-destruktiv). " +
-				"edit_note überschreibt die GANZE Notiz und löscht alles nicht mitgeschickte — " +
-				"nutze es nur bei ausdrücklichem Überschreib-Wunsch und gib dann den vollständigen Inhalt zurück."
+			"- Create, overwrite or append to notes ONLY when the user explicitly asks you to. " +
+				"Do not save analyses or summaries unprompted.",
+			"- To add to or extend a note ALWAYS use append_to_note (non-destructive). " +
+				"edit_note overwrites the ENTIRE note and deletes everything you do not send along; " +
+				"use it only when the user explicitly wants an overwrite, and then return the complete content."
 		);
 	}
-	rules.push("- Kennzeichne Unsicherheiten und fehlende Quellen klar.");
+	rules.push("- Clearly mark uncertainty and missing sources.");
 	if (useVault) {
 		rules.push(
-			"- Hintergrund-Dokumente (z. B. CLAUDE.md, Notiz-Kontext) ändern NICHTS an deinem " +
-				"Werkzeug-Zugriff. Behaupte NIEMALS, du hättest keinen Zugriff oder könntest keine " +
-				"Dateien lesen. Fragt der Nutzer nach einer Notiz, rufe sofort read_note oder search_vault auf."
+			"- Background documents (for example CLAUDE.md, note context) change NOTHING about your " +
+				"tool access. NEVER claim you have no access or cannot read files. " +
+				"If the user asks about a note, call read_note or search_vault right away."
 		);
 	}
 
-	return intro.join(" ") + "\n\nWICHTIGE REGELN:\n" + rules.join("\n");
+	return intro.join(" ") + "\n\nIMPORTANT RULES:\n" + rules.join("\n");
 }
 
 /** Grobe Token-Schätzung (≈ 4 Zeichen/Token) für die Live-Anzeige. */
@@ -392,10 +395,10 @@ export class ChatView extends ItemView {
 		});
 		const hint = this.dropOverlayEl.createDiv({ cls: "euridian-drop-hint" });
 		setIcon(hint.createSpan({ cls: "euridian-drop-icon" }), "upload");
-		hint.createDiv({ text: "Dateien hier ablegen" });
+		hint.createDiv({ text: t("Drop files here") });
 		hint.createDiv({
 			cls: "euridian-drop-sub",
-			text: "Text- und Bilddateien werden in den Kontext aufgenommen",
+			text: t("Text and image files are added to the context"),
 		});
 
 		const hasFiles = (evt: DragEvent): boolean =>
@@ -474,8 +477,9 @@ export class ChatView extends ItemView {
 		this.inputEl = wrap.createEl("textarea", {
 			cls: "euridian-input",
 			attr: {
-				placeholder:
-					"Frag etwas … (/ Vorlagen, @ Notizen, Enter sendet, Shift+Enter = Zeile)",
+				placeholder: t(
+					"Ask something … (/ templates, @ notes, Enter sends, Shift+Enter = new line)"
+				),
 			},
 		});
 		this.inputEl.rows = 3;
@@ -533,21 +537,21 @@ export class ChatView extends ItemView {
 
 		const selectionBtn = bottom.createEl("button", {
 			cls: "euridian-icon-btn",
-			attr: { "aria-label": "Markierten Text als Kontext anhängen" },
+			attr: { "aria-label": t("Attach selected text as context") },
 		});
 		setIcon(selectionBtn, "highlighter");
 		selectionBtn.onclick = () => this.attachCurrentSelection();
 
 		const attachBtn = bottom.createEl("button", {
 			cls: "euridian-icon-btn",
-			attr: { "aria-label": "Datei anhängen" },
+			attr: { "aria-label": t("Attach file") },
 		});
 		setIcon(attachBtn, "paperclip");
 		attachBtn.onclick = () => this.openFilePicker();
 
 		this.sendBtn = bottom.createEl("button", {
 			cls: "euridian-send-btn mod-cta",
-			text: "Senden",
+			text: t("Send"),
 		});
 		this.sendBtn.onclick = () => this.onSendOrStop();
 	}
@@ -734,7 +738,7 @@ export class ChatView extends ItemView {
 		const container = this.bodyEl.createDiv({ cls: "euridian-messages" });
 		const tab = new ChatTab(
 			id,
-			`Chat ${this.tabCounter}`,
+			t("Chat {n}", { n: this.tabCounter }),
 			container,
 			currentModelRef(this.plugin.settings)
 		);
@@ -812,7 +816,7 @@ export class ChatView extends ItemView {
 		// "+"-Knopf.
 		const addEl = this.tabBarEl.createDiv({
 			cls: "euridian-tab-add",
-			attr: { "aria-label": "Neuer Tab" },
+			attr: { "aria-label": t("New tab") },
 		});
 		setIcon(addEl, "plus");
 		addEl.addEventListener("click", () => this.addTab());
@@ -926,7 +930,7 @@ export class ChatView extends ItemView {
 		const backend = this.activeTab.modelRef.backend;
 		const select = this.modelSelectEl;
 		select.empty();
-		select.title = `Backend dieses Chats: ${this.backendLabel(backend)}`;
+		select.title = t("Backend of this chat: {label}", { label: this.backendLabel(backend) });
 
 		const current = this.currentModel();
 		// Reihenfolge: gecachte Liste aus den Settings (kann vom Settings-Tab
@@ -944,7 +948,7 @@ export class ChatView extends ItemView {
 		if (names.length === 0) {
 			const opt = select.createEl("option", {
 				value: "",
-				text: "— kein Modell —",
+				text: t("— no model —"),
 			});
 			opt.disabled = true;
 			return;
@@ -968,7 +972,7 @@ export class ChatView extends ItemView {
 		// unberührt — sie sind der Standard für NEUE Chats.
 		this.activeTab.modelRef = { ...this.activeTab.modelRef, model: value };
 		this.persist();
-		new Notice(`Modell dieses Chats: ${this.shortModel(value)}`);
+		new Notice(t("Model of this chat: {model}", { model: this.shortModel(value) }));
 	}
 
 	private refKey(ref: ModelRef): string {
@@ -1018,7 +1022,7 @@ export class ChatView extends ItemView {
 			if (tab.imagesRejectedFor.has(key)) return false;
 			tab.imagesRejectedFor.add(key);
 			new Notice(
-				`„${name}“ nimmt keine Bilder an — sende ohne Bilder erneut. Für Bilder ein Modell mit Bildunterstützung wählen.`,
+				t("\"{name}\" does not accept images. Resending without images. For images, choose a model with image support.", { name }),
 				8000
 			);
 			return true;
@@ -1027,7 +1031,7 @@ export class ChatView extends ItemView {
 		if (known !== undefined && known <= rejection.max) return false;
 		tab.imageLimitFor.set(key, rejection.max);
 		new Notice(
-			`„${name}“ erlaubt max. ${rejection.max} Bilder pro Anfrage — sende mit den neuesten ${rejection.max} erneut.`,
+			t("\"{name}\" allows at most {max} images per request. Resending with the latest {max}.", { name, max: rejection.max }),
 			8000
 		);
 		return true;
@@ -1141,14 +1145,14 @@ export class ChatView extends ItemView {
 			tab.imagesRejectedFor.has(this.refKey(tab.modelRef))
 		) {
 			new Notice(
-				`„${this.shortModel(tab.modelRef.model)}“ hat Bilder zuvor abgelehnt — das Bild wird nicht mitgeschickt. Modell wechseln oder neuen Chat starten.`,
+				t("\"{name}\" rejected images earlier, so the image is not sent. Switch the model or start a new chat.", { name: this.shortModel(tab.modelRef.model) }),
 				8000
 			);
 		}
 
 		if (tab.messages.length === 0) {
 			tab.containerEl.empty();
-			const titleSrc = displayText || attachedFiles[0] || "Chat";
+			const titleSrc = displayText || attachedFiles[0] || t("Chat");
 			tab.title = titleSrc.length > 22 ? titleSrc.slice(0, 22) + "…" : titleSrc;
 			this.renderTabBar();
 		}
@@ -1163,7 +1167,7 @@ export class ChatView extends ItemView {
 		this.appendMessageBubble(
 			tab,
 			"user",
-			displayText || "(Anhänge)",
+			displayText || t("(attachments)"),
 			attachedFiles,
 			images
 		);
@@ -1185,7 +1189,7 @@ export class ChatView extends ItemView {
 		thinkingDots.createSpan();
 		const thinkingTimerEl = thinkingEl.createSpan({
 			cls: "euridian-thinking-timer",
-			text: "denkt 0 s",
+			text: t("thinking 0 s"),
 		});
 		const thinkingStart = Date.now();
 		const thinkingTick = window.setInterval(() => {
@@ -1197,8 +1201,8 @@ export class ChatView extends ItemView {
 			// 21.08.2026: Anfrage schien tot, kam aber bei Rückfrage sofort zurück).
 			const text =
 				secs >= QUEUE_HINT_THRESHOLD_S
-					? `denkt ${secs} s (evtl. Warteschlange auf dem Server)`
-					: `denkt ${secs} s`;
+					? t("thinking {secs} s (maybe a queue on the server)", { secs })
+					: t("thinking {secs} s", { secs });
 			thinkingTimerEl.setText(text);
 		}, 1000);
 
@@ -1321,9 +1325,9 @@ export class ChatView extends ItemView {
 				await this.renderMarkdown(contentEl, streamText);
 				this.addAssistantActions(bubbleEl, streamText);
 			} else if (toolsEl.childElementCount > 0) {
-				contentEl.setText("(Aktionen ausgeführt — siehe oben)");
+				contentEl.setText(t("(actions performed, see above)"));
 			} else {
-				contentEl.setText("(keine Antwort)");
+				contentEl.setText(t("(no answer)"));
 			}
 		} catch (err) {
 			if (thinkingEl.isConnected) thinkingEl.remove();
@@ -1407,10 +1411,10 @@ export class ChatView extends ItemView {
 					// sonst droht ein Kontext-Limit-Fehler des Backends.
 					chipEl.addClass("is-rejected");
 					output =
-						"Fehler: Zu viele/große Werkzeug-Ergebnisse in dieser Anfrage " +
-						"(Kontext-Budget erschöpft). Nutze list_notes' Dateigröße gezielter, " +
-						"statt viele Notizen einzeln mit read_note zu öffnen, oder fasse " +
-						"zusammen, was du bisher gefunden hast.";
+						"Error: too many or too large tool results in this request " +
+						"(context budget exhausted). Use the file sizes from list_notes more " +
+						"selectively instead of opening many notes one by one with read_note, or " +
+						"summarize what you have found so far.";
 				} else if (isWebTool(call.function.name)) {
 					// Websuche ist rein lesend — keine Schreib-Bestätigung nötig.
 					output = await executeWebToolCall(this.plugin.settings, call);
@@ -1428,8 +1432,8 @@ export class ChatView extends ItemView {
 						if (!approved) {
 							chipEl.addClass("is-rejected");
 							output =
-								"Der Nutzer hat diese Schreibaktion abgelehnt. Führe sie nicht aus. " +
-								"Frage bei Bedarf nach, was stattdessen geschehen soll.";
+								"The user rejected this write action. Do not perform it. " +
+								"Ask what should happen instead if needed.";
 						} else {
 							output = await executeToolCall(this.app, call);
 							chipEl.addClass("is-done");
@@ -1454,7 +1458,7 @@ export class ChatView extends ItemView {
 			}
 		}
 
-		new Notice(`${VARIANT.name}: Maximale Werkzeug-Schritte erreicht.`);
+		new Notice(t("{name}: maximum number of tool steps reached.", { name: VARIANT.name }));
 	}
 
 	// ------------------------------------------------------- Datei-Anhänge
@@ -1470,10 +1474,10 @@ export class ChatView extends ItemView {
 		const view = this.getContextMarkdownView();
 		const sel = view?.editor.getSelection() ?? "";
 		if (!sel.trim()) {
-			new Notice("Kein Text markiert.");
+			new Notice(t("No text selected."));
 			return;
 		}
-		this.addSelectionAttachment(sel, view?.file?.path ?? "Notiz");
+		this.addSelectionAttachment(sel, view?.file?.path ?? t("Note"));
 	}
 
 	/**
@@ -1488,28 +1492,28 @@ export class ChatView extends ItemView {
 			truncated = true;
 		}
 		const noteName = path.split("/").pop() ?? path;
-		const name = `Auswahl: ${noteName} (${text.length} Z.)`;
+		const name = t("Selection: {note} ({count} chars)", { note: noteName, count: text.length });
 		this.pendingAttachments.push({ kind: "selection", name, path, content });
 		this.renderAttachmentChips();
 		this.updateStatus();
 		new Notice(
 			truncated
-				? `Auswahl angehängt (auf ${MAX_ATTACHMENT_CHARS.toLocaleString()} Zeichen gekürzt).`
-				: "Auswahl zum Kontext hinzugefügt."
+				? t("Selection attached (truncated to {max} characters).", { max: MAX_ATTACHMENT_CHARS.toLocaleString() })
+				: t("Selection added to the context.")
 		);
 	}
 
 	/** Vault-Notiz (Markdown) als Text-Anhang. */
 	private async addVaultAttachment(file: TFile): Promise<void> {
 		if (this.pendingAttachments.some((a) => a.path === file.path)) {
-			new Notice(`${file.name} ist bereits angehängt.`);
+			new Notice(t("{file} is already attached.", { file: file.name }));
 			return;
 		}
 		let content = await this.app.vault.cachedRead(file);
 		if (content.length > MAX_ATTACHMENT_CHARS) {
 			content = content.slice(0, MAX_ATTACHMENT_CHARS);
 			new Notice(
-				`${file.name}: auf ${MAX_ATTACHMENT_CHARS.toLocaleString()} Zeichen gekürzt.`
+				t("{file}: truncated to {max} characters.", { file: file.name, max: MAX_ATTACHMENT_CHARS.toLocaleString() })
 			);
 		}
 		this.pendingAttachments.push({
@@ -1536,14 +1540,14 @@ export class ChatView extends ItemView {
 		// Bei externen Dateien gibt Electron einen .path; sonst nur den Namen.
 		const path = (file as File & { path?: string }).path || file.name;
 		if (this.pendingAttachments.some((a) => a.path === path)) {
-			new Notice(`${file.name} ist bereits angehängt.`);
+			new Notice(t("{file} is already attached.", { file: file.name }));
 			return;
 		}
 
 		const kind = classifyFile(file.name, file.type);
 		if (kind === null) {
 			new Notice(
-				`${file.name}: Dateityp nicht unterstützt (nur Text- und Bilddateien).`
+				t("{file}: file type not supported (text and image files only).", { file: file.name })
 			);
 			return;
 		}
@@ -1551,7 +1555,7 @@ export class ChatView extends ItemView {
 		if (kind === "image") {
 			if (file.size > MAX_IMAGE_BYTES) {
 				new Notice(
-					`${file.name} ist zu groß (max. ${MAX_IMAGE_BYTES / 1024 / 1024} MB).`
+					t("{file} is too large (max. {mb} MB).", { file: file.name, mb: MAX_IMAGE_BYTES / 1024 / 1024 })
 				);
 				return;
 			}
@@ -1559,7 +1563,7 @@ export class ChatView extends ItemView {
 			try {
 				dataUrl = await this.readAsDataUrl(file);
 			} catch {
-				new Notice(`${file.name} konnte nicht gelesen werden.`);
+				new Notice(t("{file} could not be read.", { file: file.name }));
 				return;
 			}
 			this.pendingAttachments.push({
@@ -1573,13 +1577,13 @@ export class ChatView extends ItemView {
 			try {
 				content = await file.text();
 			} catch {
-				new Notice(`${file.name} konnte nicht gelesen werden.`);
+				new Notice(t("{file} could not be read.", { file: file.name }));
 				return;
 			}
 			if (content.length > MAX_ATTACHMENT_CHARS) {
 				content = content.slice(0, MAX_ATTACHMENT_CHARS);
 				new Notice(
-					`${file.name}: auf ${MAX_ATTACHMENT_CHARS.toLocaleString()} Zeichen gekürzt.`
+					t("{file}: truncated to {max} characters.", { file: file.name, max: MAX_ATTACHMENT_CHARS.toLocaleString() })
 				);
 			}
 			this.pendingAttachments.push({
@@ -1590,7 +1594,7 @@ export class ChatView extends ItemView {
 			});
 		}
 
-		new Notice(`${file.name} zum Kontext hinzugefügt.`);
+		new Notice(t("{file} added to the context.", { file: file.name }));
 		this.renderAttachmentChips();
 		this.updateStatus();
 	}
@@ -1601,7 +1605,7 @@ export class ChatView extends ItemView {
 			const reader = new FileReader();
 			reader.onload = () => resolve(reader.result as string);
 			reader.onerror = () =>
-				reject(reader.error ?? new Error("Datei konnte nicht gelesen werden."));
+				reject(reader.error ?? new Error(t("File could not be read.")));
 			reader.readAsDataURL(file);
 		});
 	}
@@ -1733,8 +1737,8 @@ export class ChatView extends ItemView {
 		}
 		if (tab.historySummary) {
 			systemParts.push(
-				`<conversation_summary>\nZusammenfassung des bisherigen, nicht mehr im ` +
-					`Volltext enthaltenen Gesprächsverlaufs:\n${tab.historySummary}\n</conversation_summary>`
+				`<conversation_summary>\nSummary of the earlier conversation that is no longer ` +
+					`included in full:\n${tab.historySummary}\n</conversation_summary>`
 			);
 		}
 
@@ -1777,7 +1781,7 @@ export class ChatView extends ItemView {
 				const dropped = m.images.length - keep;
 				const note =
 					dropped > 0
-						? `\n[${dropped} Bild${dropped > 1 ? "er" : ""} für dieses Modell nicht mitgeschickt.]`
+						? `\n[${dropped} image${dropped > 1 ? "s" : ""} not sent for this model.]`
 						: "";
 				if (keep === 0) {
 					result.push({ role: m.role, content: (m.content || "") + note });
@@ -1835,7 +1839,7 @@ export class ChatView extends ItemView {
 
 		const newlyDropped = tab.messages.slice(tab.summarizedThroughIndex, cutoff);
 		const transcript = newlyDropped
-			.map((m) => `${m.role === "user" ? "Nutzer" : "Assistent"}: ${m.content}`)
+			.map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
 			.join("\n\n");
 		const priorSummary = tab.historySummary
 			? `Bisherige Zusammenfassung:\n${tab.historySummary}\n\n`
@@ -1845,12 +1849,12 @@ export class ChatView extends ItemView {
 			const endpoint = this.endpointFor(tab);
 			const summary = await this.requestPlainCompletion(
 				endpoint,
-				"Du fasst Chat-Verläufe präzise und kompakt zusammen. Erhalte wichtige " +
-					"Fakten, Entscheidungen, Zwischenergebnisse und offene Fragen. Nur " +
-					"Fließtext, keine Höflichkeitsfloskeln, max. ~250 Wörter.",
-				`${priorSummary}Neue Nachrichten seit der letzten Zusammenfassung:\n${transcript}\n\n` +
-					"Fasse den GESAMTEN bisherigen Verlauf (alte Zusammenfassung + neue " +
-					"Nachrichten) neu zusammen."
+				"You summarize chat histories precisely and compactly. Keep important " +
+					"facts, decisions, intermediate results and open questions. Plain " +
+					"prose only, no pleasantries, max. ~250 words. Write in the language of the conversation.",
+				`${priorSummary}New messages since the last summary:\n${transcript}\n\n` +
+					"Summarize the ENTIRE history so far (old summary + new " +
+					"messages) anew."
 			);
 			tab.historySummary = summary;
 			tab.summarizedThroughIndex = cutoff;
@@ -1912,14 +1916,14 @@ export class ChatView extends ItemView {
 		try {
 			const summary = await this.requestPlainCompletion(
 				endpoint,
-				"Du fasst die bisherigen Werkzeug-Aufrufe eines KI-Agenten kompakt " +
-					"zusammen: was wurde geprüft/gefunden, was ist das Zwischenergebnis. " +
-					"Nur Fließtext, keine Floskeln, max. ~200 Wörter.",
+				"You summarize the tool calls an AI agent has made so far, compactly: " +
+					"what was checked or found, and what the intermediate result is. " +
+					"Plain prose only, no filler, max. ~200 words. Write in the language of the conversation.",
 				transcript.slice(0, 60_000)
 			);
 			working.splice(loopStartIdx, toCompact.length, {
 				role: "assistant",
-				content: `[Zusammenfassung bisheriger Werkzeug-Schritte in dieser Anfrage]\n${summary}`,
+				content: `[Summary of earlier tool steps in this request]\n${summary}`,
 			});
 		} catch {
 			// Kompression fehlgeschlagen — weiter mit vollem Verlauf, das
@@ -1937,7 +1941,7 @@ export class ChatView extends ItemView {
 		if (content.length > MAX_INSTRUCTIONS_CHARS) {
 			content =
 				content.slice(0, MAX_INSTRUCTIONS_CHARS) +
-				`\n\n[… gekürzt, ${content.length - MAX_INSTRUCTIONS_CHARS} Zeichen ausgelassen]`;
+				`\n\n[… truncated, ${content.length - MAX_INSTRUCTIONS_CHARS} characters omitted]`;
 		}
 		return `<euridian_instructions path="${path}">\n${content}\n</euridian_instructions>`;
 	}
@@ -1955,7 +1959,7 @@ export class ChatView extends ItemView {
 		if (content.length > MAX_CURRENT_NOTE_CHARS) {
 			content =
 				content.slice(0, MAX_CURRENT_NOTE_CHARS) +
-				`\n\n[… gekürzt, ${content.length - MAX_CURRENT_NOTE_CHARS} Zeichen ausgelassen]`;
+				`\n\n[… truncated, ${content.length - MAX_CURRENT_NOTE_CHARS} characters omitted]`;
 		}
 		return `<current_note path="${file.path}">\n${content}\n</current_note>`;
 	}
@@ -1973,7 +1977,7 @@ export class ChatView extends ItemView {
 				void this.renderMarkdown(contentEl, partialText);
 				contentEl.createDiv({
 					cls: "euridian-aborted-note",
-					text: "— abgebrochen —",
+					text: t("— cancelled —"),
 				});
 			} else {
 				bubbleEl.remove();
@@ -1984,7 +1988,7 @@ export class ChatView extends ItemView {
 		const msg =
 			err instanceof EuridianError
 				? err.message
-				: `Unerwarteter Fehler: ${String(err)}`;
+				: t("Unexpected error: {error}", { error: String(err) });
 		contentEl.empty();
 		contentEl.createDiv({ cls: "euridian-error", text: `⚠ ${msg}` });
 		new Notice(`${VARIANT.name}: ${msg}`, 8000);
@@ -2038,17 +2042,17 @@ export class ChatView extends ItemView {
 
 		const copyBtn = actions.createEl("button", {
 			cls: "euridian-icon-btn",
-			attr: { "aria-label": "Kopieren" },
+			attr: { "aria-label": t("Copy") },
 		});
 		setIcon(copyBtn, "copy");
 		copyBtn.onclick = async () => {
 			await navigator.clipboard.writeText(text);
-			new Notice("Kopiert.");
+			new Notice(t("Copied."));
 		};
 
 		const insertBtn = actions.createEl("button", {
 			cls: "euridian-icon-btn",
-			attr: { "aria-label": "In Notiz einfügen" },
+			attr: { "aria-label": t("Insert into note") },
 		});
 		setIcon(insertBtn, "file-down");
 		insertBtn.onclick = () => this.insertIntoNote(text);
@@ -2057,10 +2061,10 @@ export class ChatView extends ItemView {
 	private async insertIntoNote(text: string): Promise<void> {
 		const view = this.getContextMarkdownView();
 		if (!view) {
-			new Notice("Keine aktive Notiz zum Einfügen geöffnet.");
+			new Notice(t("No active note open to insert into."));
 			return;
 		}
-		const noteName = view.file?.basename ?? "Notiz";
+		const noteName = view.file?.basename ?? t("Note");
 
 		// Nicht-leere Auswahl im Zieleditor → könnte aus einer Notiz stammen,
 		// die der Nutzer längst nicht mehr sieht (der Chat merkt sich die
@@ -2074,7 +2078,7 @@ export class ChatView extends ItemView {
 		}
 
 		view.editor.replaceSelection(text);
-		new Notice(`In "${noteName}" eingefügt.`);
+		new Notice(t("Inserted into \"{note}\".", { note: noteName }));
 	}
 
 	private async renderMarkdown(el: HTMLElement, markdown: string): Promise<void> {
@@ -2097,15 +2101,15 @@ export class ChatView extends ItemView {
 		empty.createDiv({
 			cls: "euridian-empty-sub",
 			text: this.plugin.settings.includeCurrentNote
-				? "Die aktuelle Notiz wird als Kontext mitgesendet."
-				: "Stell eine Frage, um zu starten.",
+				? t("The current note is sent along as context.")
+				: t("Ask a question to get started."),
 		});
 	}
 
 	/** Send-Button + Eingabe an den Streaming-Zustand des aktiven Tabs anpassen. */
 	private syncInputState(): void {
 		const streaming = this.activeTab.isStreaming;
-		this.sendBtn.setText(streaming ? "Stop" : "Senden");
+		this.sendBtn.setText(streaming ? t("Stop") : t("Send"));
 		this.sendBtn.toggleClass("mod-warning", streaming);
 		this.sendBtn.toggleClass("mod-cta", !streaming);
 	}
@@ -2138,20 +2142,24 @@ export class ChatView extends ItemView {
 				);
 			}
 		}
-		let status = `~${historyTokens + inputTokens + attachmentTokens + instructionsTokens} Token im Kontext`;
+		let status = t("~{count} tokens in context", { count: historyTokens + inputTokens + attachmentTokens + instructionsTokens });
 		// Zeigt, WELCHE Notiz als Kontext mitgesendet würde — sonst nicht
 		// erkennbar, dass das die zuletzt aktive Notiz sein kann, auch wenn
 		// der Nutzer längst zu einer anderen gewechselt hat (Security-Audit,
 		// 19.08.2026).
 		if (this.plugin.settings.includeCurrentNote) {
 			const noteName = this.getContextMarkdownView()?.file?.basename;
-			if (noteName) status += ` · Notiz: ${noteName}`;
+			if (noteName) status += ` · ${t("Note: {note}", { note: noteName })}`;
 		}
 		if (imageAttCount > 0) {
-			status += ` · ${imageAttCount} Bild${imageAttCount > 1 ? "er" : ""}`;
+			status +=
+				" · " +
+				(imageAttCount > 1
+					? t("{count} images", { count: imageAttCount })
+					: t("{count} image", { count: imageAttCount }));
 		}
 		if (tab.lastUsage) {
-			status += ` · letzte Antwort: ${tab.lastUsage.totalTokens} Token`;
+			status += ` · ${t("last answer: {count} tokens", { count: tab.lastUsage.totalTokens })}`;
 			if (tab.lastTokensPerSecond) {
 				status += ` · ~${tab.lastTokensPerSecond.toFixed(1)} t/s`;
 			}

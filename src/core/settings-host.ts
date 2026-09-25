@@ -6,6 +6,7 @@
 
 import { Notice, Setting } from "obsidian";
 import { resolveEndpoint } from "./backend";
+import { t } from "./i18n";
 import { EuridianError } from "./types";
 import type { EuridianApiClient } from "./api-client";
 import type EuridianPlugin from "./main";
@@ -20,29 +21,31 @@ export interface SettingsHost {
 /** Button "Verbindung testen" — ruft die Modell-Liste des Backends ab. */
 export function renderConnectionTest(host: SettingsHost): void {
 	new Setting(host.containerEl)
-		.setName("Verbindung testen")
-		.setDesc("Ruft die Modell-Liste des Backends ab.")
+		.setName(t("Test connection"))
+		.setDesc(t("Fetches the model list from the backend."))
 		.addButton((btn) =>
 			btn
-				.setButtonText("Testen")
+				.setButtonText(t("Test"))
 				.setCta()
 				.onClick(async () => {
-					btn.setDisabled(true).setButtonText("Teste …");
+					btn.setDisabled(true).setButtonText(t("Testing …"));
 					try {
 						const endpoint = resolveEndpoint(host.plugin.settings);
 						const models = await host.client.listModels(endpoint);
 						new Notice(
-							`✓ Verbunden mit ${endpoint.label}. ` +
-								`${models.length} Modell(e) gefunden.`
+							t("✓ Connected to {label}. {count} model(s) found.", {
+								label: endpoint.label,
+								count: models.length,
+							})
 						);
 					} catch (err) {
 						const msg =
 							err instanceof EuridianError
 								? err.message
-								: `Unbekannter Fehler: ${String(err)}`;
+								: t("Unknown error: {error}", { error: String(err) });
 						new Notice(`✕ ${msg}`, 8000);
 					} finally {
-						btn.setDisabled(false).setButtonText("Testen");
+						btn.setDisabled(false).setButtonText(t("Test"));
 					}
 				})
 		);

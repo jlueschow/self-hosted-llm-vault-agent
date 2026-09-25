@@ -12,15 +12,15 @@ import { App, Editor, EditorPosition, Modal, Notice, Setting } from "obsidian";
 import { EuridianApiClient } from "./api-client";
 import { effectiveThinking, resolveEndpoint } from "./backend";
 import { diffWords, renderDiffInto } from "./diff";
+import { t } from "./i18n";
 import { ApiMessage, EuridianError } from "./types";
 import type EuridianPlugin from "./main";
 
 const EDIT_SYSTEM_PROMPT =
-	"Du bist ein präziser Text-Editor. Du bekommst einen Textausschnitt und eine " +
-	"Anweisung. Gib AUSSCHLIESSLICH den überarbeiteten Text zurück — keine " +
-	"Erklärung, keine Anführungszeichen, keinen Markdown-Codeblock, keine Vor- " +
-	"oder Nachbemerkung. Behalte Sprache und Formatierung bei, sofern die " +
-	"Anweisung nichts anderes verlangt.";
+	"You are a precise text editor. You receive a text excerpt and an " +
+	"instruction. Return ONLY the revised text: no explanation, no quotation " +
+	"marks, no Markdown code block, no preface or closing remark. Keep the " +
+	"language and formatting unless the instruction says otherwise.";
 
 /** Entfernt einen umschließenden Markdown-Codeblock, falls das Modell einen baut. */
 function stripFences(s: string): string {
@@ -65,11 +65,11 @@ export class InlineEditModal extends Modal {
 	private renderPrompt(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.createEl("h3", { text: "Inline-Edit" });
+		contentEl.createEl("h3", { text: t("Inline edit") });
 
 		contentEl.createDiv({
 			cls: "euridian-inline-label",
-			text: "Markierter Text:",
+			text: t("Selected text:"),
 		});
 		contentEl.createDiv({
 			cls: "euridian-inline-original",
@@ -77,28 +77,28 @@ export class InlineEditModal extends Modal {
 		});
 
 		new Setting(contentEl)
-			.setName("Anweisung")
-			.setDesc("Wie soll der Text geändert werden?")
-			.addText((t) => {
-				t.setPlaceholder("z. B. kürzer, formeller, ins Englische")
+			.setName(t("Instruction"))
+			.setDesc(t("How should the text be changed?"))
+			.addText((tg) => {
+				tg.setPlaceholder(t("e.g. shorter, more formal, into English"))
 					.setValue(this.instruction)
 					.onChange((v) => (this.instruction = v));
-				t.inputEl.addEventListener("keydown", (e) => {
+				tg.inputEl.addEventListener("keydown", (e) => {
 					if (e.key === "Enter") {
 						e.preventDefault();
 						void this.run();
 					}
 				});
-				window.setTimeout(() => t.inputEl.focus(), 0);
+				window.setTimeout(() => tg.inputEl.focus(), 0);
 			});
 
 		new Setting(contentEl)
 			.addButton((b) =>
-				b.setButtonText("Abbrechen").onClick(() => this.close())
+				b.setButtonText(t("Cancel")).onClick(() => this.close())
 			)
 			.addButton((b) =>
 				b
-					.setButtonText("Bearbeiten")
+					.setButtonText(t("Edit"))
 					.setCta()
 					.onClick(() => void this.run())
 			);
@@ -109,7 +109,7 @@ export class InlineEditModal extends Modal {
 	private async run(): Promise<void> {
 		if (this.busy) return;
 		if (!this.instruction.trim()) {
-			new Notice("Bitte eine Anweisung eingeben.");
+			new Notice(t("Please enter an instruction."));
 			return;
 		}
 		this.busy = true;
@@ -122,7 +122,7 @@ export class InlineEditModal extends Modal {
 			{ role: "system", content: EDIT_SYSTEM_PROMPT },
 			{
 				role: "user",
-				content: `Anweisung: ${this.instruction}\n\nText:\n${this.original}`,
+				content: `Instruction: ${this.instruction}\n\nText:\n${this.original}`,
 			},
 		];
 
@@ -160,17 +160,17 @@ export class InlineEditModal extends Modal {
 	private renderGenerating(): HTMLElement {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.createEl("h3", { text: "Inline-Edit" });
+		contentEl.createEl("h3", { text: t("Inline edit") });
 		contentEl.createDiv({
 			cls: "euridian-inline-label",
-			text: "Wird bearbeitet …",
+			text: t("Editing …"),
 		});
 		const genEl = contentEl.createDiv({
 			cls: "euridian-inline-original",
 		});
 
 		new Setting(contentEl).addButton((b) =>
-			b.setButtonText("Stop").onClick(() => this.abort?.abort())
+			b.setButtonText(t("Stop")).onClick(() => this.abort?.abort())
 		);
 		return genEl;
 	}
@@ -180,12 +180,12 @@ export class InlineEditModal extends Modal {
 	private renderDiff(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.createEl("h3", { text: "Inline-Edit — Vorschau" });
+		contentEl.createEl("h3", { text: t("Inline edit: preview") });
 
 		if (this.revised === this.original) {
 			contentEl.createDiv({
 				cls: "euridian-inline-label",
-				text: "Keine Änderung vorgeschlagen.",
+				text: t("No change suggested."),
 			});
 		} else {
 			const diffEl = contentEl.createDiv({ cls: "euridian-diff" });
@@ -194,14 +194,14 @@ export class InlineEditModal extends Modal {
 
 		new Setting(contentEl)
 			.addButton((b) =>
-				b.setButtonText("Verwerfen").onClick(() => this.close())
+				b.setButtonText(t("Discard")).onClick(() => this.close())
 			)
 			.addButton((b) =>
-				b.setButtonText("Neu").onClick(() => this.renderPrompt())
+				b.setButtonText(t("Retry")).onClick(() => this.renderPrompt())
 			)
 			.addButton((b) =>
 				b
-					.setButtonText("Übernehmen")
+					.setButtonText(t("Apply"))
 					.setCta()
 					.onClick(() => this.apply())
 			);
@@ -209,22 +209,22 @@ export class InlineEditModal extends Modal {
 
 	private apply(): void {
 		this.editor.replaceRange(this.revised, this.from, this.to);
-		new Notice("Inline-Edit übernommen.");
+		new Notice(t("Inline edit applied."));
 		this.close();
 	}
 
 	private renderError(msg: string): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.createEl("h3", { text: "Inline-Edit — Fehler" });
+		contentEl.createEl("h3", { text: t("Inline edit: error") });
 		contentEl.createDiv({ cls: "euridian-error", text: `⚠ ${msg}` });
 		new Setting(contentEl)
 			.addButton((b) =>
-				b.setButtonText("Schließen").onClick(() => this.close())
+				b.setButtonText(t("Close")).onClick(() => this.close())
 			)
 			.addButton((b) =>
 				b
-					.setButtonText("Erneut")
+					.setButtonText(t("Try again"))
 					.setCta()
 					.onClick(() => this.renderPrompt())
 			);

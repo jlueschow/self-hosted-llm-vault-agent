@@ -1,4 +1,5 @@
 import { Notice, Setting } from "obsidian";
+import { t } from "../../core/i18n";
 import { Provider } from "../../core/provider";
 import { renderConnectionTest, SettingsHost } from "../../core/settings-host";
 import { EuridianError } from "../../core/types";
@@ -15,13 +16,13 @@ export const serverProvider: Provider = {
 		if (!base) {
 			throw new EuridianError(
 				"bad_request",
-				"Server-URL fehlt — in den Einstellungen eintragen."
+				t("Server URL is missing. Enter it in the settings.")
 			);
 		}
 		if (!model) {
 			throw new EuridianError(
 				"bad_request",
-				"Kein Modell gewählt — in den Einstellungen festlegen."
+				t("No model selected. Choose one in the settings.")
 			);
 		}
 		const key = s.serverApiKey.trim();
@@ -32,10 +33,9 @@ export const serverProvider: Provider = {
 			modelsUrl: `${base}/v1/models`,
 			headers,
 			model,
-			label: "Server",
+			label: t("Server"),
 			offlineHint:
-				"Läuft der Server, und ist die URL korrekt? Ggf. VPN/Netzwerk nötig. " +
-				"Bei Ollama: `ollama serve`.",
+				t("Is the server running, and is the URL correct? A VPN or network connection may be needed. For Ollama: `ollama serve`."),
 		};
 	},
 	getModel: (s) => s.serverModel,
@@ -54,7 +54,7 @@ export const serverProvider: Provider = {
 // ---------------------------------------------------------------- Settings-UI
 
 function errorText(err: unknown): string {
-	return err instanceof EuridianError ? err.message : `Unbekannter Fehler: ${String(err)}`;
+	return err instanceof EuridianError ? err.message : t("Unknown error: {error}", { error: String(err) });
 }
 
 export function renderServerSettings(host: SettingsHost): void {
@@ -63,37 +63,36 @@ export function renderServerSettings(host: SettingsHost): void {
 
 	containerEl.createEl("p", {
 		cls: "setting-item-description",
-		text:
-			"Für jeden OpenAI-kompatiblen Server: Ollama (lokal oder im Netzwerk), " +
-			"vLLM, LM Studio oder ein Hochschul-/Firmenserver. Erwartet die " +
-			"Standard-Routen /v1/chat/completions und /v1/models unter der Basis-URL.",
+		text: t(
+			"For any OpenAI-compatible server: Ollama (local or on the network), vLLM, LM Studio, or a university or company server. Expects the standard routes /v1/chat/completions and /v1/models under the base URL."
+		),
 	});
 
 	new Setting(containerEl)
-		.setName("Server-URL")
-		.setDesc("Basis-URL ohne Pfad, z. B. http://localhost:11434 (Ollama) oder https://llm.example.org")
-		.addText((t) => {
-			t.setPlaceholder("http://localhost:11434")
+		.setName(t("Server URL"))
+		.setDesc(t("Base URL without a path, e.g. http://localhost:11434 (Ollama) or https://llm.example.org"))
+		.addText((tg) => {
+			tg.setPlaceholder("http://localhost:11434")
 				.setValue(s.serverUrl)
 				.onChange(async (v) => {
 					s.serverUrl = v.trim();
 					await host.plugin.saveSettings();
 				});
-			t.inputEl.autocomplete = "off";
+			tg.inputEl.autocomplete = "off";
 		});
 
 	new Setting(containerEl)
-		.setName("API-Key")
-		.setDesc("Nur falls der Server Authentifizierung verlangt. Sonst leer lassen.")
-		.addText((t) => {
-			t.setPlaceholder("Bearer-Token (optional)")
+		.setName(t("API key"))
+		.setDesc(t("Only if the server requires authentication. Otherwise leave empty."))
+		.addText((tg) => {
+			tg.setPlaceholder(t("Bearer token (optional)"))
 				.setValue(s.serverApiKey)
 				.onChange(async (v) => {
 					s.serverApiKey = v.trim();
 					await host.plugin.saveSettings();
 				});
-			t.inputEl.type = "password";
-			t.inputEl.autocomplete = "off";
+			tg.inputEl.type = "password";
+			tg.inputEl.autocomplete = "off";
 		});
 
 	renderModelSelector(host);
@@ -115,10 +114,10 @@ function renderModelSelector(host: SettingsHost): void {
 
 	if (list.length === 0) {
 		new Setting(containerEl)
-			.setName("Modell")
-			.setDesc("Noch nicht gescannt — unten „Modelle scannen“ klicken. Oder manuell:")
-			.addText((t) => {
-				t.setPlaceholder("Modellname")
+			.setName(t("Model"))
+			.setDesc(t("Not scanned yet. Click \"Scan models\" below, or enter a name manually:"))
+			.addText((tg) => {
+				tg.setPlaceholder(t("Model name"))
 					.setValue(s.serverModel)
 					.onChange(async (v) => {
 						s.serverModel = v.trim();
@@ -126,18 +125,18 @@ function renderModelSelector(host: SettingsHost): void {
 					});
 				// Ohne autocomplete=off kann der Browser hier fremde Autofill-Vorschläge
 				// einsetzen, die dann als „aktuelles Modell" gespeichert würden.
-				t.inputEl.autocomplete = "off";
+				tg.inputEl.autocomplete = "off";
 			});
 		return;
 	}
 
 	new Setting(containerEl)
-		.setName("Modell")
-		.setDesc(`${list.length} Modell(e) gefunden.`)
+		.setName(t("Model"))
+		.setDesc(t("{count} model(s) found.", { count: list.length }))
 		.addDropdown((dd) => {
 			for (const name of list) dd.addOption(name, name);
 			if (s.serverModel && !list.includes(s.serverModel)) {
-				dd.addOption(s.serverModel, `${s.serverModel} (gewählt)`);
+				dd.addOption(s.serverModel, t("{model} (selected)", { model: s.serverModel }));
 			}
 			dd.setValue(s.serverModel).onChange(async (v) => {
 				s.serverModel = v;
@@ -151,22 +150,22 @@ function renderScanButton(host: SettingsHost): void {
 	const s = host.plugin.settings;
 	const desc =
 		s.serverModels.length > 0
-			? `Aktuell bekannt: ${s.serverModels.join(", ")}`
-			: "Liest die verfügbaren Modelle vom Server.";
+			? t("Currently known: {models}", { models: s.serverModels.join(", ") })
+			: t("Reads the available models from the server.");
 
 	new Setting(host.containerEl)
-		.setName("Modelle scannen")
+		.setName(t("Scan models"))
 		.setDesc(desc)
 		.addButton((btn) =>
 			btn
-				.setButtonText("Scannen")
+				.setButtonText(t("Scan"))
 				.setCta()
 				.onClick(async () => {
 					if (!s.serverUrl.trim()) {
-						new Notice("Erst die Server-URL eintragen.");
+						new Notice(t("Enter the server URL first."));
 						return;
 					}
-					btn.setDisabled(true).setButtonText("Scanne …");
+					btn.setDisabled(true).setButtonText(t("Scanning …"));
 					try {
 						const base = trimTrailingSlash(s.serverUrl.trim());
 						const key = s.serverApiKey.trim();
@@ -177,7 +176,7 @@ function renderScanButton(host: SettingsHost): void {
 							modelsUrl: `${base}/v1/models`,
 							headers,
 							model: "",
-							label: "Server",
+							label: t("Server"),
 						});
 						s.serverModels = models;
 						if (models.length > 0 && !models.includes(s.serverModel)) {
@@ -186,14 +185,14 @@ function renderScanButton(host: SettingsHost): void {
 						await host.plugin.saveSettings();
 						new Notice(
 							models.length
-								? `✓ ${models.length} Modell(e) gefunden.`
-								: "Keine Modelle gefunden — Modellname manuell eintragen."
+								? t("✓ {count} model(s) found.", { count: models.length })
+								: t("No models found. Enter the model name manually.")
 						);
 						host.display();
 					} catch (err) {
 						new Notice(`✕ ${errorText(err)}`, 8000);
 					} finally {
-						btn.setDisabled(false).setButtonText("Scannen");
+						btn.setDisabled(false).setButtonText(t("Scan"));
 					}
 				})
 		);
@@ -204,26 +203,26 @@ function renderPreloadButton(host: SettingsHost): void {
 	const s = host.plugin.settings;
 
 	new Setting(host.containerEl)
-		.setName("Modell vorladen (nur Ollama)")
+		.setName(t("Preload model (Ollama only)"))
 		.setDesc(
-			"Lädt das gewählte Modell vorab in den Arbeitsspeicher, damit der erste Chat ohne Ladezeit startet. Nur für Ollama."
+			t("Loads the selected model into memory ahead of time so the first chat starts without a loading delay. Ollama only.")
 		)
 		.addButton((btn) =>
-			btn.setButtonText("Laden").onClick(async () => {
+			btn.setButtonText(t("Load")).onClick(async () => {
 				if (!s.serverModel) {
-					new Notice("Erst ein Modell wählen.");
+					new Notice(t("Choose a model first."));
 					return;
 				}
-				btn.setDisabled(true).setButtonText("Lade …");
+				btn.setDisabled(true).setButtonText(t("Loading …"));
 				const t0 = Date.now();
 				try {
 					await host.client.preloadOllama(s.serverUrl, s.serverModel);
 					const secs = ((Date.now() - t0) / 1000).toFixed(1);
-					new Notice(`✓ ${s.serverModel} geladen (${secs}s).`);
+					new Notice(t("✓ {model} loaded ({secs}s).", { model: s.serverModel, secs }));
 				} catch (err) {
 					new Notice(`✕ ${errorText(err)}`, 8000);
 				} finally {
-					btn.setDisabled(false).setButtonText("Laden");
+					btn.setDisabled(false).setButtonText(t("Load"));
 				}
 			})
 		);
@@ -232,12 +231,12 @@ function renderPreloadButton(host: SettingsHost): void {
 function renderThinkingToggle(host: SettingsHost): void {
 	const s = host.plugin.settings;
 	new Setting(host.containerEl)
-		.setName("Thinking / Reasoning")
+		.setName(t("Thinking / reasoning"))
 		.setDesc(
-			"Reasoning-Modelle „denken“ sonst oft minutenlang vor jeder Antwort — auch im Agenten. Standardmäßig AUS empfohlen."
+			t("Reasoning models can otherwise \"think\" for minutes before every answer, including in the agent. Off is recommended.")
 		)
-		.addToggle((t) =>
-			t.setValue(s.serverThinking).onChange(async (v) => {
+		.addToggle((tg) =>
+			tg.setValue(s.serverThinking).onChange(async (v) => {
 				s.serverThinking = v;
 				await host.plugin.saveSettings();
 			})

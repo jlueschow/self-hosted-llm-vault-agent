@@ -11,6 +11,7 @@
 
 import { App, Modal, Setting, TFile } from "obsidian";
 import { diffWords, renderDiffInto } from "./diff";
+import { t } from "./i18n";
 import { asNotePath } from "./vault-tools";
 
 /** Eine schreibende Aktion, die bestätigt werden soll. */
@@ -39,7 +40,7 @@ class ConfirmWriteModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h3", { text: "Schreibaktion bestätigen" });
+		contentEl.createEl("h3", { text: t("Confirm write action") });
 		contentEl.createDiv({
 			cls: "euridian-inline-label",
 			text: this.headline(),
@@ -56,30 +57,30 @@ class ConfirmWriteModal extends Modal {
 			const delta = newLen - oldLen;
 			const warn =
 				delta < 0
-					? `  ⚠ ${oldLen} → ${newLen} Zeichen (${delta})`
-					: `  ${oldLen} → ${newLen} Zeichen (+${delta})`;
+					? `  ⚠ ${t("{old} → {new} characters ({delta})", { old: oldLen, new: newLen, delta })}`
+					: `  ${t("{old} → {new} characters ({delta})", { old: oldLen, new: newLen, delta: `+${delta}` })}`;
 			contentEl.createDiv({
 				cls:
 					"euridian-inline-label" +
 					(delta < 0 ? " euridian-warn" : ""),
-				text: "Änderungen (rot = entfernt, grün = neu):" + warn,
+				text: t("Changes (red = removed, green = new):") + warn,
 			});
 			const diffEl = contentEl.createDiv({ cls: "euridian-diff" });
 			renderDiffInto(diffEl, diffWords(this.currentContent, this.action.content));
 		} else {
 			contentEl.createDiv({
 				cls: "euridian-inline-original",
-				text: this.action.content || "(leerer Inhalt)",
+				text: this.action.content || t("(empty content)"),
 			});
 		}
 
 		new Setting(contentEl)
 			.addButton((b) =>
-				b.setButtonText("Ablehnen").onClick(() => this.decide(false))
+				b.setButtonText(t("Reject")).onClick(() => this.decide(false))
 			)
 			.addButton((b) =>
 				b
-					.setButtonText("Übernehmen")
+					.setButtonText(t("Apply"))
 					.setCta()
 					.onClick(() => this.decide(true))
 			);
@@ -101,11 +102,11 @@ class ConfirmWriteModal extends Modal {
 	private headline(): string {
 		switch (this.action.tool) {
 			case "create_note":
-				return `Neue Notiz erstellen: ${this.action.path}`;
+				return t("Create new note: {path}", { path: this.action.path });
 			case "append_to_note":
-				return `An Notiz anhängen: ${this.action.path}`;
+				return t("Append to note: {path}", { path: this.action.path });
 			case "edit_note":
-				return `⚠ Notiz KOMPLETT überschreiben: ${this.action.path}`;
+				return t("⚠ Overwrite the ENTIRE note: {path}", { path: this.action.path });
 			default:
 				return this.action.path;
 		}
@@ -157,12 +158,13 @@ class ConfirmInsertModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h3", { text: "In Notiz einfügen?" });
+		contentEl.createEl("h3", { text: t("Insert into note?") });
 		contentEl.createDiv({
 			cls: "euridian-inline-label euridian-warn",
-			text:
-				`⚠ In "${this.noteName}" ist noch Text markiert — dieser wird ` +
-				"durch die Antwort ersetzt. Ist das wirklich die richtige Notiz?",
+			text: t(
+				'⚠ Text is still selected in "{note}". It will be replaced by the answer. Is this really the right note?',
+				{ note: this.noteName }
+			),
 		});
 		contentEl.createDiv({
 			cls: "euridian-inline-original",
@@ -171,11 +173,11 @@ class ConfirmInsertModal extends Modal {
 
 		new Setting(contentEl)
 			.addButton((b) =>
-				b.setButtonText("Abbrechen").onClick(() => this.decide(false))
+				b.setButtonText(t("Cancel")).onClick(() => this.decide(false))
 			)
 			.addButton((b) =>
 				b
-					.setButtonText("Einfügen")
+					.setButtonText(t("Insert"))
 					.setCta()
 					.onClick(() => this.decide(true))
 			);

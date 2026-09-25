@@ -19,7 +19,7 @@ export const DEFAULT_BACKEND: Backend = serverProvider.id;
 export const VARIANT = {
 	name: "Vault Agent",
 	viewType: "self-hosted-llm-vault-agent-chat",
-	intro: "Du bist ein KI-Assistent direkt in Obsidian und arbeitest mit einem selbst gehosteten Sprachmodell.",
+	intro: "You are an AI assistant inside Obsidian, running on a self-hosted language model.",
 	defaultInstructionsPath: "Agent.md",
 };
 
